@@ -68,11 +68,15 @@
 				{{ t('calorietracker', 'Estimate your Total Daily Energy Expenditure (TDEE) using the Mifflin St-Jeor equation, then apply it as your calorie goal.') }}
 			</p>
 
+			<h3 class="settings-section__subtitle">
+				{{ t('calorietracker', 'Body measurements') }}
+			</h3>
 			<div class="settings-section__row settings-section__row--two">
 				<div>
-					<label class="settings-section__select-label">{{ t('calorietracker', 'Biological sex') }}</label>
+					<label class="settings-section__select-label" for="tdee-sex">{{ t('calorietracker', 'Biological sex') }}</label>
 					<NcSelect
 						v-model="tdee.sexOption"
+						input-id="tdee-sex"
 						:options="sexOptions"
 						:clearable="false"
 						label="label" />
@@ -103,26 +107,26 @@
 					:placeholder="t('calorietracker', 'e.g. 70')" />
 			</div>
 
+			<h3 class="settings-section__subtitle">
+				{{ t('calorietracker', 'Activity level') }}
+			</h3>
 			<div class="settings-section__row">
-				<div>
-					<label class="settings-section__select-label">{{ t('calorietracker', 'Activity level') }}</label>
-					<NcSelect
-						v-model="tdee.activityOption"
-						:options="activityOptions"
-						:clearable="false"
-						label="label" />
-				</div>
+				<NcSelect
+					v-model="tdee.activityOption"
+					:options="activityOptions"
+					:clearable="false"
+					label="label" />
 			</div>
 
+			<h3 class="settings-section__subtitle">
+				{{ t('calorietracker', 'Goal') }}
+			</h3>
 			<div class="settings-section__row">
-				<div>
-					<label class="settings-section__select-label">{{ t('calorietracker', 'Goal') }}</label>
-					<NcSelect
-						v-model="tdee.goalOption"
-						:options="goalOptions"
-						:clearable="false"
-						label="label" />
-				</div>
+				<NcSelect
+					v-model="tdee.goalOption"
+					:options="goalOptions"
+					:clearable="false"
+					label="label" />
 			</div>
 
 			<div class="settings-section__tdee-result" :class="{ 'settings-section__tdee-result--visible': tdeeResult !== null }">
