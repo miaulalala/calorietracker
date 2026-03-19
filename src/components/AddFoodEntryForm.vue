@@ -97,7 +97,7 @@
 				</div>
 
 				<NcDateTimePickerNative
-					v-model="form.eatenAt"
+					v-model="eatenAtDate"
 					type="date"
 					:label="t('calorietracker', 'Date')"
 					required />
@@ -195,6 +195,18 @@ export default {
 			},
 			set(option) {
 				this.form.mealType = option.value
+			},
+		},
+
+		eatenAtDate: {
+			get() {
+				// NcDateTimePickerNative expects a Date object
+				const [y, m, d] = this.form.eatenAt.split('-').map(Number)
+				return new Date(y, m - 1, d)
+			},
+			set(value) {
+				// Always store as YYYY-MM-DD regardless of locale
+				this.form.eatenAt = toLocalDateString(value instanceof Date ? value : new Date(value))
 			},
 		},
 	},
