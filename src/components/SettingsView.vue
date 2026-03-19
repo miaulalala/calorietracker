@@ -5,10 +5,6 @@
 
 <template>
 	<div class="settings-view">
-		<h2 class="settings-view__title">
-			{{ t('calorietracker', 'Daily goals') }}
-		</h2>
-
 		<NcNoteCard v-if="saved" type="success" class="settings-view__feedback">
 			{{ t('calorietracker', 'Settings saved.') }}
 		</NcNoteCard>
@@ -119,7 +115,10 @@ export default {
 			try {
 				await this.$store.dispatch('settings/saveSettings', this.form)
 				this.saved = true
-				setTimeout(() => { this.saved = false }, 3000)
+				setTimeout(() => {
+					this.saved = false
+					this.$store.dispatch('settings/closeSettings')
+				}, 1000)
 			} finally {
 				this.saving = false
 			}
@@ -133,12 +132,6 @@ export default {
 	max-width: 560px;
 	margin: 0 auto;
 	padding: 40px 24px 24px;
-}
-
-.settings-view__title {
-	margin: 0 0 28px;
-	font-size: 1.4em;
-	font-weight: bold;
 }
 
 .settings-view__section {

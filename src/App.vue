@@ -16,6 +16,13 @@
 			@close="$store.dispatch('foodEntries/closeAddModal')">
 			<AddFoodEntryForm />
 		</NcModal>
+		<NcModal
+			v-if="settingsOpen"
+			size="normal"
+			:name="t('calorietracker', 'Daily goals')"
+			@close="$store.dispatch('settings/closeSettings')">
+			<SettingsView />
+		</NcModal>
 	</NcContent>
 </template>
 
@@ -26,6 +33,7 @@ import NcAppContent from '@nextcloud/vue/dist/Components/NcAppContent.js'
 import NcModal from '@nextcloud/vue/dist/Components/NcModal.js'
 import DaySidebar from './components/DaySidebar.vue'
 import AddFoodEntryForm from './components/AddFoodEntryForm.vue'
+import SettingsView from './components/SettingsView.vue'
 
 export default {
 	name: 'App',
@@ -35,10 +43,14 @@ export default {
 		NcModal,
 		DaySidebar,
 		AddFoodEntryForm,
+		SettingsView,
 	},
 
 	computed: {
 		...mapState('foodEntries', ['addModalOpen', 'editingEntry']),
+		settingsOpen() {
+			return this.$store.state.settings.open
+		},
 	},
 }
 </script>
