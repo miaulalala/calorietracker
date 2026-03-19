@@ -95,14 +95,11 @@
 						label="label" />
 				</div>
 
-				<div class="food-entry-form__field-wrap">
-					<label class="food-entry-form__select-label">{{ t('calorietracker', 'Date') }}</label>
-					<NcDateTimePickerNative
-						v-model="form.eatenAt"
-						type="date"
-						:label="t('calorietracker', 'Date')"
-						required />
-				</div>
+				<NcDateTimePickerNative
+					v-model="form.eatenAt"
+					type="date"
+					:label="t('calorietracker', 'Date')"
+					required />
 			</div>
 
 			<!-- Calorie preview -->
