@@ -77,6 +77,7 @@
 					required />
 
 				<NcInputField
+					ref="amountField"
 					v-model.number="form.amountGrams"
 					type="number"
 					:label="t('calorietracker', 'Amount (g)')"
@@ -267,6 +268,9 @@ export default {
 			this.form.fatPer100g = result.fatPer100g ?? null
 			this.showManual = true
 			this.closeSearch()
+			this.$nextTick(() => {
+				this.$refs.amountField?.$el?.querySelector('input')?.focus()
+			})
 		},
 
 		closeSearch() {
