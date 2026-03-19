@@ -92,22 +92,19 @@
 					type="number"
 					min="10"
 					max="120"
-					:label="t('calorietracker', 'Age (years)')"
-					:placeholder="t('calorietracker', 'e.g. 30')" />
+					:label="t('calorietracker', 'Age (years)')" />
 				<NcInputField
 					v-model.number="tdee.height"
 					type="number"
 					min="50"
 					max="300"
-					:label="t('calorietracker', 'Height (cm)')"
-					:placeholder="t('calorietracker', 'e.g. 170')" />
+					:label="t('calorietracker', 'Height (cm)')" />
 				<NcInputField
 					v-model.number="tdee.weight"
 					type="number"
 					min="20"
 					max="500"
-					:label="t('calorietracker', 'Weight (kg)')"
-					:placeholder="t('calorietracker', 'e.g. 70')" />
+					:label="t('calorietracker', 'Weight (kg)')" />
 			</div>
 
 			<h3 class="settings-section__subtitle">
