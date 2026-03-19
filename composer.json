@@ -1,0 +1,21 @@
+{
+	"name": "nextcloud/calorietracker",
+	"description": "Track your daily calorie intake",
+	"license": "AGPL-3.0-or-later",
+	"config": {
+		"optimize-autoloader": true,
+		"classmap-authoritative": true,
+		"platform": {
+			"php": "8.1"
+		},
+		"sort-packages": true
+	},
+	"autoload": {
+		"psr-4": {
+			"OCA\\CalorieTracker\\": "lib/"
+		}
+	},
+	"scripts": {
+		"lint": "find . -name \\*.php -not -path './vendor/*' -print0 | xargs -0 -n1 php -l"
+	}
+}
