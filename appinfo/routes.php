@@ -18,5 +18,9 @@ return [
 		['name' => 'food_entry#update', 'url' => '/entries/{id}', 'verb' => 'PUT'],
 		['name' => 'food_entry#delete', 'url' => '/entries/{id}', 'verb' => 'DELETE'],
 		['name' => 'food_entry#summary', 'url' => '/entries/summary', 'verb' => 'GET'],
+
+		// settings
+		['name' => 'settings#get', 'url' => '/settings', 'verb' => 'GET'],
+		['name' => 'settings#save', 'url' => '/settings', 'verb' => 'PUT'],
 	],
 ];

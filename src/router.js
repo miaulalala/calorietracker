@@ -6,6 +6,7 @@
 import Vue from 'vue'
 import Router from 'vue-router'
 import DayView from './components/DayView.vue'
+import SettingsView from './components/SettingsView.vue'
 
 Vue.use(Router)
 
@@ -15,6 +16,10 @@ export default new Router({
 		{
 			path: '/',
 			component: DayView,
+		},
+		{
+			path: '/settings',
+			component: SettingsView,
 		},
 	],
 })

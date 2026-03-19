@@ -23,25 +23,34 @@
 
 		<!-- Calorie summary -->
 		<div class="day-view__summary">
-			{{ t('calorietracker', 'Total: {kcal} kcal', { kcal: totalCalories }) }}
+			<template v-if="calorieGoal > 0">
+				<div class="day-view__summary-line">
+					<span>{{ t('calorietracker', '{kcal} / {goal} kcal', { kcal: totalCalories, goal: calorieGoal }) }}</span>
+					<span class="day-view__summary-pct">{{ caloriePct }}%</span>
+				</div>
+				<NcProgressBar class="day-view__calorie-bar" :value="Math.min(caloriePct, 100)" />
+			</template>
+			<template v-else>
+				{{ t('calorietracker', 'Total: {kcal} kcal', { kcal: totalCalories }) }}
+			</template>
 		</div>
 
 		<!-- Macro breakdown -->
-		<div v-if="macroTotals" class="day-view__macros">
+		<div v-if="macroTotalsWithGoals" class="day-view__macros">
 			<div class="day-view__macro">
 				<span class="day-view__macro-label">{{ t('calorietracker', 'Protein') }}</span>
-				<NcProgressBar class="day-view__macro-bar day-view__macro-bar--protein" :value="macroTotals.protein.pct" />
-				<span class="day-view__macro-value">{{ macroTotals.protein.grams }}g &middot; {{ macroTotals.protein.kcal }} kcal &middot; {{ macroTotals.protein.pct }}%</span>
+				<NcProgressBar class="day-view__macro-bar day-view__macro-bar--protein" :value="macroTotalsWithGoals.protein.barPct" />
+				<span class="day-view__macro-value">{{ macroTotalsWithGoals.protein.grams }}g<template v-if="proteinGoal > 0"> / {{ proteinGoal }}g</template></span>
 			</div>
 			<div class="day-view__macro">
 				<span class="day-view__macro-label">{{ t('calorietracker', 'Carbs') }}</span>
-				<NcProgressBar class="day-view__macro-bar day-view__macro-bar--carbs" :value="macroTotals.carbs.pct" />
-				<span class="day-view__macro-value">{{ macroTotals.carbs.grams }}g &middot; {{ macroTotals.carbs.kcal }} kcal &middot; {{ macroTotals.carbs.pct }}%</span>
+				<NcProgressBar class="day-view__macro-bar day-view__macro-bar--carbs" :value="macroTotalsWithGoals.carbs.barPct" />
+				<span class="day-view__macro-value">{{ macroTotalsWithGoals.carbs.grams }}g<template v-if="carbsGoal > 0"> / {{ carbsGoal }}g</template></span>
 			</div>
 			<div class="day-view__macro">
 				<span class="day-view__macro-label">{{ t('calorietracker', 'Fat') }}</span>
-				<NcProgressBar class="day-view__macro-bar day-view__macro-bar--fat" :value="macroTotals.fat.pct" />
-				<span class="day-view__macro-value">{{ macroTotals.fat.grams }}g &middot; {{ macroTotals.fat.kcal }} kcal &middot; {{ macroTotals.fat.pct }}%</span>
+				<NcProgressBar class="day-view__macro-bar day-view__macro-bar--fat" :value="macroTotalsWithGoals.fat.barPct" />
+				<span class="day-view__macro-value">{{ macroTotalsWithGoals.fat.grams }}g<template v-if="fatGoal > 0"> / {{ fatGoal }}g</template></span>
 			</div>
 		</div>
 
@@ -68,7 +77,33 @@ export default {
 
 	computed: {
 		...mapState('foodEntries', ['currentDate']),
+		...mapState('settings', {
+			calorieGoal: 'dailyCalorieGoal',
+			proteinGoal: 'dailyProteinGoal',
+			carbsGoal: 'dailyCarbsGoal',
+			fatGoal: 'dailyFatGoal',
+		}),
 		...mapGetters('foodEntries', ['totalCalories', 'entriesByMealType', 'macroTotals']),
+
+		caloriePct() {
+			if (!this.calorieGoal) return 0
+			return Math.round(this.totalCalories / this.calorieGoal * 100)
+		},
+
+		macroTotalsWithGoals() {
+			if (!this.macroTotals) return null
+			const withBar = (macro, goal) => ({
+				...macro,
+				barPct: goal > 0
+					? Math.min(Math.round(macro.grams / goal * 100), 100)
+					: macro.pct,
+			})
+			return {
+				protein: withBar(this.macroTotals.protein, this.proteinGoal),
+				carbs:   withBar(this.macroTotals.carbs, this.carbsGoal),
+				fat:     withBar(this.macroTotals.fat, this.fatGoal),
+			}
+		},
 
 		formattedDate() {
 			const [year, month, day] = this.currentDate.split('-')
@@ -133,6 +168,23 @@ export default {
 	font-weight: bold;
 	text-align: center;
 	color: var(--color-primary-element);
+}
+
+.day-view__summary-line {
+	display: flex;
+	justify-content: center;
+	align-items: baseline;
+	gap: 8px;
+	margin-bottom: 8px;
+}
+
+.day-view__summary-pct {
+	font-size: 0.85em;
+	color: var(--color-text-maxcontrast);
+}
+
+.day-view__calorie-bar {
+	width: 100%;
 }
 
 .day-view__macros {

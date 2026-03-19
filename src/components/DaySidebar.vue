@@ -10,6 +10,9 @@
 				+ {{ t('calorietracker', 'Add new entry') }}
 			</NcButton>
 		</template>
+		<template #footer>
+			<NcAppNavigationSettings :name="t('calorietracker', 'Daily goals')" @click="$router.push('/settings')" />
+		</template>
 		<template #list>
 			<NcAppNavigationItem
 				v-for="week in weeks"
@@ -51,6 +54,7 @@
 <script>
 import NcAppNavigation from '@nextcloud/vue/dist/Components/NcAppNavigation.js'
 import NcAppNavigationItem from '@nextcloud/vue/dist/Components/NcAppNavigationItem.js'
+import NcAppNavigationSettings from '@nextcloud/vue/dist/Components/NcAppNavigationSettings.js'
 import NcButton from '@nextcloud/vue/dist/Components/NcButton.js'
 import { mapState } from 'vuex'
 import { toLocalDateString } from '../utils/date.js'
@@ -58,7 +62,7 @@ import { toLocalDateString } from '../utils/date.js'
 export default {
 	name: 'DaySidebar',
 
-	components: { NcAppNavigation, NcAppNavigationItem, NcButton },
+	components: { NcAppNavigation, NcAppNavigationItem, NcAppNavigationSettings, NcButton },
 
 	computed: {
 		...mapState('foodEntries', ['currentDate', 'daySummaries']),
@@ -112,6 +116,7 @@ export default {
 
 	created() {
 		this.$store.dispatch('foodEntries/fetchSummaries')
+		this.$store.dispatch('settings/fetchSettings')
 	},
 
 	methods: {
