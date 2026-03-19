@@ -72,15 +72,12 @@
 				{{ t('calorietracker', 'Body measurements') }}
 			</h3>
 			<div class="settings-section__row settings-section__row--two">
-				<div>
-					<label class="settings-section__select-label" for="tdee-sex">{{ t('calorietracker', 'Biological sex') }}</label>
-					<NcSelect
-						v-model="tdee.sexOption"
-						input-id="tdee-sex"
-						:options="sexOptions"
-						:clearable="false"
-						label="label" />
-				</div>
+				<NcSelect
+					v-model="tdee.sexOption"
+					:aria-label="t('calorietracker', 'Biological sex')"
+					:options="sexOptions"
+					:clearable="false"
+					label="label" />
 				<NcInputField
 					v-model.number="tdee.age"
 					type="number"
@@ -113,6 +110,7 @@
 			<div class="settings-section__row">
 				<NcSelect
 					v-model="tdee.activityOption"
+					:aria-label="t('calorietracker', 'Activity level')"
 					:options="activityOptions"
 					:clearable="false"
 					label="label" />
@@ -124,6 +122,7 @@
 			<div class="settings-section__row">
 				<NcSelect
 					v-model="tdee.goalOption"
+					:aria-label="t('calorietracker', 'Goal')"
 					:options="goalOptions"
 					:clearable="false"
 					label="label" />
@@ -292,14 +291,6 @@ export default {
 
 .settings-section__hint--top {
 	margin: 0 0 16px;
-}
-
-.settings-section__select-label {
-	display: block;
-	margin-bottom: 4px;
-	font-size: 0.875em;
-	font-weight: 500;
-	color: var(--color-main-text);
 }
 
 .settings-section__row {
