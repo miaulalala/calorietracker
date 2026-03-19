@@ -9,115 +9,175 @@
 			{{ t('calorietracker', 'Settings saved.') }}
 		</NcNoteCard>
 
-		<section class="settings-view__section">
-			<h3 class="settings-view__section-title">
-				{{ t('calorietracker', 'Calories') }}
-			</h3>
-			<div class="settings-view__row">
-				<NcInputField
-					v-model.number="form.dailyCalorieGoal"
-					type="number"
-					min="0"
-					:label="t('calorietracker', 'Daily calorie goal (kcal)')"
-					:placeholder="t('calorietracker', 'e.g. 2000')" />
-			</div>
-		</section>
+		<!-- Tab bar -->
+		<div class="settings-view__tablist" role="tablist">
+			<NcButton
+				id="tab-goals"
+				role="tab"
+				:variant="activeTab === 'goals' ? 'secondary' : 'tertiary'"
+				:aria-selected="activeTab === 'goals' ? 'true' : 'false'"
+				aria-controls="tabpanel-goals"
+				@click="activeTab = 'goals'">
+				<template #icon>
+					<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<circle cx="12" cy="12" r="10" />
+						<circle cx="12" cy="12" r="6" />
+						<circle cx="12" cy="12" r="2" />
+					</svg>
+				</template>
+				{{ t('calorietracker', 'Goals') }}
+			</NcButton>
+			<NcButton
+				id="tab-calculate"
+				role="tab"
+				:variant="activeTab === 'calculate' ? 'secondary' : 'tertiary'"
+				:aria-selected="activeTab === 'calculate' ? 'true' : 'false'"
+				aria-controls="tabpanel-calculate"
+				@click="activeTab = 'calculate'">
+				<template #icon>
+					<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<rect x="4" y="2" width="16" height="20" rx="2" />
+						<line x1="8" y1="6" x2="16" y2="6" />
+						<line x1="8" y1="10" x2="10" y2="10" />
+						<line x1="14" y1="10" x2="16" y2="10" />
+						<line x1="8" y1="14" x2="10" y2="14" />
+						<line x1="14" y1="14" x2="16" y2="14" />
+						<line x1="8" y1="18" x2="10" y2="18" />
+						<line x1="14" y1="18" x2="16" y2="18" />
+					</svg>
+				</template>
+				{{ t('calorietracker', 'Calculate') }}
+			</NcButton>
+		</div>
 
-		<section class="settings-view__section">
-			<h3 class="settings-view__section-title">
-				{{ t('calorietracker', 'Macros') }}
-			</h3>
-			<p class="settings-view__hint">
-				{{ t('calorietracker', 'Set to 0 to disable a goal.') }}
+		<!-- Goals tab -->
+		<div
+			id="tabpanel-goals"
+			role="tabpanel"
+			aria-labelledby="tab-goals"
+			:inert="activeTab !== 'goals' || undefined"
+			:hidden="activeTab !== 'goals'">
+			<section class="settings-view__section">
+				<h3 class="settings-view__section-title">
+					{{ t('calorietracker', 'Calories') }}
+				</h3>
+				<div class="settings-view__row">
+					<NcInputField
+						v-model.number="form.dailyCalorieGoal"
+						type="number"
+						min="0"
+						:label="t('calorietracker', 'Daily calorie goal (kcal)')"
+						:placeholder="t('calorietracker', 'e.g. 2000')" />
+				</div>
+			</section>
+
+			<section class="settings-view__section">
+				<h3 class="settings-view__section-title">
+					{{ t('calorietracker', 'Macros') }}
+				</h3>
+				<p class="settings-view__hint">
+					{{ t('calorietracker', 'Set to 0 to disable a goal.') }}
+				</p>
+				<div class="settings-view__row settings-view__row--three">
+					<NcInputField
+						v-model.number="form.dailyProteinGoal"
+						type="number"
+						min="0"
+						:label="t('calorietracker', 'Protein goal (g)')"
+						:placeholder="t('calorietracker', 'e.g. 150')" />
+
+					<NcInputField
+						v-model.number="form.dailyCarbsGoal"
+						type="number"
+						min="0"
+						:label="t('calorietracker', 'Carbs goal (g)')"
+						:placeholder="t('calorietracker', 'e.g. 250')" />
+
+					<NcInputField
+						v-model.number="form.dailyFatGoal"
+						type="number"
+						min="0"
+						:label="t('calorietracker', 'Fat goal (g)')"
+						:placeholder="t('calorietracker', 'e.g. 70')" />
+				</div>
+			</section>
+
+			<div class="settings-view__actions">
+				<NcButton type="primary" :disabled="saving" @click="save">
+					{{ t('calorietracker', 'Save') }}
+				</NcButton>
+			</div>
+		</div>
+
+		<!-- Calculate tab -->
+		<div
+			id="tabpanel-calculate"
+			role="tabpanel"
+			aria-labelledby="tab-calculate"
+			:inert="activeTab !== 'calculate' || undefined"
+			:hidden="activeTab !== 'calculate'">
+			<p class="settings-view__hint settings-view__hint--spaced">
+				{{ t('calorietracker', 'Estimate your Total Daily Energy Expenditure (TDEE) using the Mifflin St-Jeor equation, then apply it as your calorie goal.') }}
 			</p>
-			<div class="settings-view__row settings-view__row--three">
-				<NcInputField
-					v-model.number="form.dailyProteinGoal"
-					type="number"
-					min="0"
-					:label="t('calorietracker', 'Protein goal (g)')"
-					:placeholder="t('calorietracker', 'e.g. 150')" />
 
-				<NcInputField
-					v-model.number="form.dailyCarbsGoal"
-					type="number"
-					min="0"
-					:label="t('calorietracker', 'Carbs goal (g)')"
-					:placeholder="t('calorietracker', 'e.g. 250')" />
-
-				<NcInputField
-					v-model.number="form.dailyFatGoal"
-					type="number"
-					min="0"
-					:label="t('calorietracker', 'Fat goal (g)')"
-					:placeholder="t('calorietracker', 'e.g. 70')" />
-			</div>
-		</section>
-
-		<section class="settings-view__section settings-view__section--tdee">
-			<h3 class="settings-view__section-title">
-				{{ t('calorietracker', 'Calculate calorie goal') }}
-			</h3>
-			<p class="settings-view__hint">
-				{{ t('calorietracker', 'Estimate your Total Daily Energy Expenditure (TDEE) using the Mifflin St-Jeor equation.') }}
-			</p>
-
-			<div class="settings-view__row settings-view__row--two">
-				<div>
-					<label class="settings-view__select-label">{{ t('calorietracker', 'Biological sex') }}</label>
-					<NcSelect
-						v-model="tdee.sexOption"
-						:options="sexOptions"
-						:clearable="false"
-						label="label" />
+			<section class="settings-view__section">
+				<div class="settings-view__row settings-view__row--two">
+					<div>
+						<label class="settings-view__select-label">{{ t('calorietracker', 'Biological sex') }}</label>
+						<NcSelect
+							v-model="tdee.sexOption"
+							:options="sexOptions"
+							:clearable="false"
+							label="label" />
+					</div>
+					<NcInputField
+						v-model.number="tdee.age"
+						type="number"
+						min="10"
+						max="120"
+						:label="t('calorietracker', 'Age (years)')"
+						:placeholder="t('calorietracker', 'e.g. 30')" />
 				</div>
-				<NcInputField
-					v-model.number="tdee.age"
-					type="number"
-					min="10"
-					max="120"
-					:label="t('calorietracker', 'Age (years)')"
-					:placeholder="t('calorietracker', 'e.g. 30')" />
-			</div>
 
-			<div class="settings-view__row settings-view__row--two">
-				<NcInputField
-					v-model.number="tdee.height"
-					type="number"
-					min="50"
-					max="300"
-					:label="t('calorietracker', 'Height (cm)')"
-					:placeholder="t('calorietracker', 'e.g. 170')" />
-				<NcInputField
-					v-model.number="tdee.weight"
-					type="number"
-					min="20"
-					max="500"
-					:label="t('calorietracker', 'Weight (kg)')"
-					:placeholder="t('calorietracker', 'e.g. 70')" />
-			</div>
-
-			<div class="settings-view__row">
-				<div>
-					<label class="settings-view__select-label">{{ t('calorietracker', 'Activity level') }}</label>
-					<NcSelect
-						v-model="tdee.activityOption"
-						:options="activityOptions"
-						:clearable="false"
-						label="label" />
+				<div class="settings-view__row settings-view__row--two">
+					<NcInputField
+						v-model.number="tdee.height"
+						type="number"
+						min="50"
+						max="300"
+						:label="t('calorietracker', 'Height (cm)')"
+						:placeholder="t('calorietracker', 'e.g. 170')" />
+					<NcInputField
+						v-model.number="tdee.weight"
+						type="number"
+						min="20"
+						max="500"
+						:label="t('calorietracker', 'Weight (kg)')"
+						:placeholder="t('calorietracker', 'e.g. 70')" />
 				</div>
-			</div>
 
-			<div class="settings-view__row">
-				<div>
-					<label class="settings-view__select-label">{{ t('calorietracker', 'Goal') }}</label>
-					<NcSelect
-						v-model="tdee.goalOption"
-						:options="goalOptions"
-						:clearable="false"
-						label="label" />
+				<div class="settings-view__row">
+					<div>
+						<label class="settings-view__select-label">{{ t('calorietracker', 'Activity level') }}</label>
+						<NcSelect
+							v-model="tdee.activityOption"
+							:options="activityOptions"
+							:clearable="false"
+							label="label" />
+					</div>
 				</div>
-			</div>
+
+				<div class="settings-view__row">
+					<div>
+						<label class="settings-view__select-label">{{ t('calorietracker', 'Goal') }}</label>
+						<NcSelect
+							v-model="tdee.goalOption"
+							:options="goalOptions"
+							:clearable="false"
+							label="label" />
+					</div>
+				</div>
+			</section>
 
 			<div class="settings-view__tdee-result" :class="{ 'settings-view__tdee-result--visible': tdeeResult !== null }">
 				<template v-if="tdeeResult !== null">
@@ -128,7 +188,7 @@
 				</template>
 			</div>
 
-			<div class="settings-view__tdee-actions">
+			<div class="settings-view__actions settings-view__actions--gap">
 				<NcButton @click="calculateTDEE">
 					{{ t('calorietracker', 'Calculate') }}
 				</NcButton>
@@ -139,12 +199,6 @@
 					{{ t('calorietracker', 'Apply as calorie goal') }}
 				</NcButton>
 			</div>
-		</section>
-
-		<div class="settings-view__actions">
-			<NcButton type="primary" :disabled="saving" @click="save">
-				{{ t('calorietracker', 'Save') }}
-			</NcButton>
 		</div>
 	</div>
 </template>
@@ -182,6 +236,7 @@ export default {
 
 	data() {
 		return {
+			activeTab: 'goals',
 			saving: false,
 			saved: false,
 			form: {
@@ -244,6 +299,7 @@ export default {
 
 		applyTDEE() {
 			this.form.dailyCalorieGoal = this.tdeeResult
+			this.activeTab = 'goals'
 		},
 
 		async save() {
@@ -268,16 +324,23 @@ export default {
 .settings-view {
 	max-width: 560px;
 	margin: 0 auto;
-	padding: 40px 24px 24px;
+	padding: 16px 24px 24px;
+}
+
+.settings-view__feedback {
+	margin-bottom: 16px;
+}
+
+.settings-view__tablist {
+	display: flex;
+	gap: 4px;
+	margin-bottom: 24px;
+	border-bottom: 1px solid var(--color-border);
+	padding-bottom: 8px;
 }
 
 .settings-view__section {
-	margin-bottom: 28px;
-}
-
-.settings-view__section--tdee {
-	border-top: 1px solid var(--color-border);
-	padding-top: 24px;
+	margin-bottom: 24px;
 }
 
 .settings-view__section-title {
@@ -290,6 +353,10 @@ export default {
 	margin: -6px 0 12px;
 	font-size: 0.85em;
 	color: var(--color-text-maxcontrast);
+}
+
+.settings-view__hint--spaced {
+	margin: 0 0 20px;
 }
 
 .settings-view__select-label {
@@ -316,8 +383,8 @@ export default {
 }
 
 .settings-view__tdee-result {
-	min-height: 44px;
-	margin: 8px 0 12px;
+	min-height: 56px;
+	margin: 0 0 16px;
 	padding: 12px 16px;
 	border-radius: var(--border-radius-large);
 	background: var(--color-background-hover);
@@ -342,18 +409,13 @@ export default {
 	color: var(--color-text-maxcontrast);
 }
 
-.settings-view__tdee-actions {
-	display: flex;
-	gap: 8px;
-	margin-bottom: 8px;
-}
-
-.settings-view__feedback {
-	margin-bottom: 20px;
-}
-
 .settings-view__actions {
 	display: flex;
 	justify-content: flex-end;
+}
+
+.settings-view__actions--gap {
+	justify-content: flex-start;
+	gap: 8px;
 }
 </style>
