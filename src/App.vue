@@ -16,13 +16,7 @@
 			@close="$store.dispatch('foodEntries/closeAddModal')">
 			<AddFoodEntryForm />
 		</NcModal>
-		<NcModal
-			v-if="settingsOpen"
-			size="normal"
-			:name="t('calorietracker', 'Daily goals')"
-			@close="$store.dispatch('settings/closeSettings')">
-			<SettingsView />
-		</NcModal>
+		<SettingsView />
 	</NcContent>
 </template>
 
@@ -48,9 +42,6 @@ export default {
 
 	computed: {
 		...mapState('foodEntries', ['addModalOpen', 'editingEntry']),
-		settingsOpen() {
-			return this.$store.state.settings.open
-		},
 	},
 }
 </script>
