@@ -43,9 +43,14 @@
 		<NcEmptyContent
 			v-if="isEmpty"
 			:name="t('calorietracker', 'No entries yet')"
-			:description="t('calorietracker', 'Add your first meal using the button in the sidebar.')">
+			:description="t('calorietracker', 'Track your first meal for this day.')">
 			<template #icon>
 				<NcIconSvgWrapper :svg="iconFood" />
+			</template>
+			<template #action>
+				<NcButton type="primary" @click="$store.dispatch('foodEntries/openAddModal')">
+					{{ t('calorietracker', 'Add food') }}
+				</NcButton>
 			</template>
 		</NcEmptyContent>
 
@@ -61,6 +66,7 @@
 <script>
 import NcListItem from '@nextcloud/vue/dist/Components/NcListItem.js'
 import NcActionButton from '@nextcloud/vue/dist/Components/NcActionButton.js'
+import NcButton from '@nextcloud/vue/dist/Components/NcButton.js'
 import NcIconSvgWrapper from '@nextcloud/vue/dist/Components/NcIconSvgWrapper.js'
 import NcEmptyContent from '@nextcloud/vue/dist/Components/NcEmptyContent.js'
 import NcDialog from '@nextcloud/vue/dist/Components/NcDialog.js'
@@ -72,7 +78,7 @@ const iconFood = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fi
 export default {
 	name: 'FoodEntryList',
 
-	components: { NcListItem, NcActionButton, NcIconSvgWrapper, NcEmptyContent, NcDialog },
+	components: { NcListItem, NcActionButton, NcButton, NcIconSvgWrapper, NcEmptyContent, NcDialog },
 
 	props: {
 		groups: {
