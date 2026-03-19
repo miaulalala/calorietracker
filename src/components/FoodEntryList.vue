@@ -19,7 +19,7 @@
 						v-for="entry in groups[mealType]"
 						:key="entry.id"
 						:name="entry.foodName"
-						:subname="entry.amountGrams + 'g · ' + entryCalories(entry) + ' kcal'"
+						:subname="entrySubname(entry)"
 						:compact="true">
 						<template #actions>
 							<NcActionButton @click="$store.dispatch('foodEntries/openAddModal', entry)">
@@ -137,6 +137,27 @@ export default {
 
 		entryCalories(entry) {
 			return Math.round(entry.caloriesPer100g * entry.amountGrams / 100)
+		},
+
+		entrySubname(entry) {
+			const parts = [
+				entry.amountGrams + 'g',
+				this.entryCalories(entry) + ' kcal',
+			]
+			const macros = []
+			if (entry.proteinPer100g != null) {
+				macros.push('P ' + Math.round(entry.proteinPer100g * entry.amountGrams / 100) + 'g')
+			}
+			if (entry.carbsPer100g != null) {
+				macros.push('C ' + Math.round(entry.carbsPer100g * entry.amountGrams / 100) + 'g')
+			}
+			if (entry.fatPer100g != null) {
+				macros.push('F ' + Math.round(entry.fatPer100g * entry.amountGrams / 100) + 'g')
+			}
+			if (macros.length > 0) {
+				parts.push(macros.join('  '))
+			}
+			return parts.join(' · ')
 		},
 
 		mealTotal(entries) {

@@ -170,6 +170,9 @@ export default {
 			highlightedIndex: -1,
 			searchDebounce: null,
 			searchError: false,
+			// Set when a result is picked from the database search
+			selectedSource: null,
+			selectedExternalId: null,
 		}
 	},
 
@@ -278,6 +281,8 @@ export default {
 			this.form.proteinPer100g = result.proteinPer100g ?? null
 			this.form.carbsPer100g = result.carbsPer100g ?? null
 			this.form.fatPer100g = result.fatPer100g ?? null
+			this.selectedSource = result.source ?? null
+			this.selectedExternalId = result.externalId ?? null
 			this.showManual = true
 			this.closeSearch()
 			this.$nextTick(() => {
@@ -322,7 +327,11 @@ export default {
 						...this.form,
 					})
 				} else {
-					await this.$store.dispatch('foodEntries/addEntry', { ...this.form })
+					await this.$store.dispatch('foodEntries/addEntry', {
+					...this.form,
+					source: this.selectedSource,
+					externalId: this.selectedExternalId,
+				})
 				}
 				this.$store.dispatch('foodEntries/closeAddModal')
 			} finally {

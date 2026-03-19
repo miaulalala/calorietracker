@@ -1,0 +1,79 @@
+<?php
+
+/**
+ * SPDX-FileCopyrightText: 2026 Nextcloud contributors
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
+declare(strict_types=1);
+
+namespace OCA\CalorieTracker\Db;
+
+use OCP\AppFramework\Db\QBMapper;
+use OCP\DB\QueryBuilder\IQueryBuilder;
+use OCP\IDBConnection;
+
+/** @template-extends QBMapper<FoodItem> */
+class FoodItemMapper extends QBMapper {
+	public function __construct(IDBConnection $db) {
+		parent::__construct($db, 'caltracker_food_items', FoodItem::class);
+	}
+
+	/**
+	 * Find an existing food item by source + external_id, or return null.
+	 */
+	public function findBySourceId(string $userId, string $source, string $externalId): ?FoodItem {
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('*')
+			->from($this->getTableName())
+			->where($qb->expr()->eq('user_id', $qb->createNamedParameter($userId)))
+			->andWhere($qb->expr()->eq('source', $qb->createNamedParameter($source)))
+			->andWhere($qb->expr()->eq('external_id', $qb->createNamedParameter($externalId)));
+
+		try {
+			return $this->findEntity($qb);
+		} catch (\OCP\AppFramework\Db\DoesNotExistException) {
+			return null;
+		}
+	}
+
+	/**
+	 * Find-or-create a food item. If it already exists (matched by user+source+externalId)
+	 * the nutritional values are refreshed in case they changed.
+	 */
+	public function upsert(
+		string $userId,
+		string $source,
+		?string $externalId,
+		string $name,
+		int $caloriesPer100g,
+		?int $proteinPer100g,
+		?int $carbsPer100g,
+		?int $fatPer100g,
+	): FoodItem {
+		// For items with a known external ID, check if we already have it
+		if ($externalId !== null) {
+			$existing = $this->findBySourceId($userId, $source, $externalId);
+			if ($existing !== null) {
+				// Refresh nutritional values (data may have changed upstream)
+				$existing->setName($name);
+				$existing->setCaloriesPer100g($caloriesPer100g);
+				$existing->setProteinPer100g($proteinPer100g);
+				$existing->setCarbsPer100g($carbsPer100g);
+				$existing->setFatPer100g($fatPer100g);
+				return $this->update($existing);
+			}
+		}
+
+		$item = new FoodItem();
+		$item->setUserId($userId);
+		$item->setSource($source);
+		$item->setExternalId($externalId);
+		$item->setName($name);
+		$item->setCaloriesPer100g($caloriesPer100g);
+		$item->setProteinPer100g($proteinPer100g);
+		$item->setCarbsPer100g($carbsPer100g);
+		$item->setFatPer100g($fatPer100g);
+		return $this->insert($item);
+	}
+}

@@ -11,12 +11,16 @@ namespace OCA\CalorieTracker\Service;
 
 use OCA\CalorieTracker\Db\FoodEntry;
 use OCA\CalorieTracker\Db\FoodEntryMapper;
+use OCA\CalorieTracker\Db\FoodItemMapper;
 use OCP\AppFramework\Db\DoesNotExistException;
 
 class FoodEntryService {
 	public const MEAL_TYPES = ['breakfast', 'lunch', 'dinner', 'snack'];
 
-	public function __construct(private FoodEntryMapper $mapper) {
+	public function __construct(
+		private FoodEntryMapper $mapper,
+		private FoodItemMapper $foodItemMapper,
+	) {
 	}
 
 	/**
@@ -37,11 +41,29 @@ class FoodEntryService {
 		?int $proteinPer100g = null,
 		?int $carbsPer100g = null,
 		?int $fatPer100g = null,
+		?string $source = null,
+		?string $externalId = null,
 	): FoodEntry {
 		$this->validateMealType($mealType);
 		$this->validateDate($eatenAt);
 		$this->validatePositive('caloriesPer100g', $caloriesPer100g);
 		$this->validatePositive('amountGrams', $amountGrams);
+
+		// Persist the food reference so it survives cache expiry
+		$foodItemId = null;
+		if ($source !== null) {
+			$foodItem = $this->foodItemMapper->upsert(
+				$userId,
+				$source,
+				$externalId,
+				trim($foodName),
+				$caloriesPer100g,
+				$proteinPer100g,
+				$carbsPer100g,
+				$fatPer100g,
+			);
+			$foodItemId = $foodItem->getId();
+		}
 
 		$entry = new FoodEntry();
 		$entry->setUserId($userId);
@@ -53,6 +75,7 @@ class FoodEntryService {
 		$entry->setProteinPer100g($proteinPer100g);
 		$entry->setCarbsPer100g($carbsPer100g);
 		$entry->setFatPer100g($fatPer100g);
+		$entry->setFoodItemId($foodItemId);
 
 		return $this->mapper->insert($entry);
 	}

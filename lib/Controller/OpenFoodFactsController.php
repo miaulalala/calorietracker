@@ -115,7 +115,9 @@ class OpenFoodFactsController extends Controller {
 				}
 
 				$results[] = [
-					'name'           => $name,
+					'source'          => 'usda_fdc',
+					'externalId'      => isset($food['fdcId']) ? (string) $food['fdcId'] : null,
+					'name'            => $name,
 					'caloriesPer100g' => (int) round((float) $kcal),
 					'proteinPer100g'  => isset($nutrients[self::NUTRIENT_PROTEIN])
 						? (int) round((float) $nutrients[self::NUTRIENT_PROTEIN]) : null,

@@ -45,6 +45,8 @@ class FoodEntryController extends Controller {
 		?int $proteinPer100g = null,
 		?int $carbsPer100g = null,
 		?int $fatPer100g = null,
+		?string $source = null,
+		?string $externalId = null,
 	): JSONResponse {
 		try {
 			$entry = $this->service->create(
@@ -57,6 +59,8 @@ class FoodEntryController extends Controller {
 				$proteinPer100g,
 				$carbsPer100g,
 				$fatPer100g,
+				$source,
+				$externalId,
 			);
 			return new JSONResponse($entry, Http::STATUS_CREATED);
 		} catch (\InvalidArgumentException $e) {
