@@ -56,59 +56,65 @@
 		<!-- Manual fields — shown after selecting a result, clicking "Add manually", or in edit mode -->
 		<template v-if="showManual || editingEntry">
 			<div class="food-entry-form__fields">
-				<label>
-					{{ t('calorietracker', 'Food name') }}
-					<input v-model.trim="form.foodName"
-						type="text"
-						required
-						:placeholder="t('calorietracker', 'e.g. Oatmeal')">
-				</label>
+				<NcInputField
+					v-model="form.foodName"
+					type="text"
+					:label="t('calorietracker', 'Food name')"
+					:placeholder="t('calorietracker', 'e.g. Oatmeal')"
+					required />
 
-				<label>
-					{{ t('calorietracker', 'kcal per 100g') }}
-					<input v-model.number="form.caloriesPer100g"
-						type="number"
-						min="1"
-						required>
-				</label>
+				<NcInputField
+					v-model.number="form.caloriesPer100g"
+					type="number"
+					:label="t('calorietracker', 'kcal per 100g')"
+					min="1"
+					required />
 
-				<label>
-					{{ t('calorietracker', 'Amount (g)') }}
-					<input v-model.number="form.amountGrams"
-						type="number"
-						min="1"
-						required>
-				</label>
+				<NcInputField
+					v-model.number="form.amountGrams"
+					type="number"
+					:label="t('calorietracker', 'Amount (g)')"
+					min="1"
+					required />
 
-				<label>
-					{{ t('calorietracker', 'Meal') }}
-					<select v-model="form.mealType" required>
-						<option value="breakfast">{{ t('calorietracker', 'Breakfast') }}</option>
-						<option value="lunch">{{ t('calorietracker', 'Lunch') }}</option>
-						<option value="dinner">{{ t('calorietracker', 'Dinner') }}</option>
-						<option value="snack">{{ t('calorietracker', 'Snack') }}</option>
-					</select>
-				</label>
+				<div class="food-entry-form__field-wrap">
+					<label class="food-entry-form__select-label">{{ t('calorietracker', 'Meal') }}</label>
+					<NcSelect
+						v-model="mealTypeOption"
+						:options="mealTypeOptions"
+						:clearable="false"
+						label="label" />
+				</div>
 
-				<label>
-					{{ t('calorietracker', 'Date') }}
-					<input v-model="form.eatenAt" type="date" required>
-				</label>
+				<div class="food-entry-form__field-wrap">
+					<label class="food-entry-form__select-label">{{ t('calorietracker', 'Date') }}</label>
+					<NcDateTimePickerNative
+						v-model="form.eatenAt"
+						type="date"
+						:label="t('calorietracker', 'Date')"
+						required />
+				</div>
 
-				<label>
-					{{ t('calorietracker', 'Protein (g/100g)') }}
-					<input v-model.number="form.proteinPer100g" type="number" min="0" :placeholder="t('calorietracker', 'optional')">
-				</label>
+				<NcInputField
+					v-model.number="form.proteinPer100g"
+					type="number"
+					:label="t('calorietracker', 'Protein (g/100g)')"
+					:placeholder="t('calorietracker', 'optional')"
+					min="0" />
 
-				<label>
-					{{ t('calorietracker', 'Carbs (g/100g)') }}
-					<input v-model.number="form.carbsPer100g" type="number" min="0" :placeholder="t('calorietracker', 'optional')">
-				</label>
+				<NcInputField
+					v-model.number="form.carbsPer100g"
+					type="number"
+					:label="t('calorietracker', 'Carbs (g/100g)')"
+					:placeholder="t('calorietracker', 'optional')"
+					min="0" />
 
-				<label>
-					{{ t('calorietracker', 'Fat (g/100g)') }}
-					<input v-model.number="form.fatPer100g" type="number" min="0" :placeholder="t('calorietracker', 'optional')">
-				</label>
+				<NcInputField
+					v-model.number="form.fatPer100g"
+					type="number"
+					:label="t('calorietracker', 'Fat (g/100g)')"
+					:placeholder="t('calorietracker', 'optional')"
+					min="0" />
 			</div>
 
 			<div v-if="form.caloriesPer100g > 0 && form.amountGrams > 0" class="food-entry-form__preview">
@@ -129,6 +135,9 @@
 
 <script>
 import NcButton from '@nextcloud/vue/dist/Components/NcButton.js'
+import NcInputField from '@nextcloud/vue/dist/Components/NcInputField.js'
+import NcSelect from '@nextcloud/vue/dist/Components/NcSelect.js'
+import NcDateTimePickerNative from '@nextcloud/vue/dist/Components/NcDateTimePickerNative.js'
 import { mapState } from 'vuex'
 import { toLocalDateString } from '../utils/date.js'
 import offApi from '../services/OpenFoodFactsApi.js'
@@ -136,7 +145,7 @@ import offApi from '../services/OpenFoodFactsApi.js'
 export default {
 	name: 'AddFoodEntryForm',
 
-	components: { NcButton },
+	components: { NcButton, NcInputField, NcSelect, NcDateTimePickerNative },
 
 	data() {
 		return {
@@ -158,6 +167,24 @@ export default {
 
 		calculatedCalories() {
 			return Math.round(this.form.caloriesPer100g * this.form.amountGrams / 100)
+		},
+
+		mealTypeOptions() {
+			return [
+				{ value: 'breakfast', label: t('calorietracker', 'Breakfast') },
+				{ value: 'lunch',     label: t('calorietracker', 'Lunch') },
+				{ value: 'dinner',    label: t('calorietracker', 'Dinner') },
+				{ value: 'snack',     label: t('calorietracker', 'Snack') },
+			]
+		},
+
+		mealTypeOption: {
+			get() {
+				return this.mealTypeOptions.find(o => o.value === this.form.mealType) ?? this.mealTypeOptions[0]
+			},
+			set(option) {
+				this.form.mealType = option.value
+			},
 		},
 	},
 
@@ -297,23 +324,15 @@ export default {
 	margin-bottom: 12px;
 }
 
-.food-entry-form__fields label {
+.food-entry-form__field-wrap {
 	display: flex;
 	flex-direction: column;
 	gap: 4px;
-	font-size: 0.9em;
-	color: var(--color-text-maxcontrast);
 }
 
-.food-entry-form__fields input,
-.food-entry-form__fields select {
-	height: 34px;
-	padding: 0 8px;
-	border: 1px solid var(--color-border-dark);
-	border-radius: var(--border-radius);
-	background: var(--color-main-background);
-	color: var(--color-main-text);
-	font-size: 1em;
+.food-entry-form__select-label {
+	font-size: 0.9em;
+	color: var(--color-text-maxcontrast);
 }
 
 .food-entry-form__search {

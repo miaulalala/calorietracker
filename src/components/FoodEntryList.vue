@@ -15,37 +15,64 @@
 				</h4>
 
 				<ul class="food-entry-list__items">
-					<li v-for="entry in groups[mealType]" :key="entry.id" class="food-entry-list__item">
-						<span class="food-entry-list__item-name">{{ entry.foodName }}</span>
-						<span class="food-entry-list__item-detail">
-							{{ entry.amountGrams }}g &middot; {{ entryCalories(entry) }} kcal
-						</span>
-						<div class="food-entry-list__item-actions">
-							<NcButton type="tertiary" :aria-label="t('calorietracker', 'Edit')" @click="$store.dispatch('foodEntries/openAddModal', entry)">
-								✏️
-							</NcButton>
-							<NcButton type="tertiary" :aria-label="t('calorietracker', 'Delete')" @click="confirmDelete(entry)">
-								🗑️
-							</NcButton>
-						</div>
-					</li>
+					<NcListItem
+						v-for="entry in groups[mealType]"
+						:key="entry.id"
+						:name="entry.foodName"
+						:subname="entry.amountGrams + 'g · ' + entryCalories(entry) + ' kcal'"
+						:compact="true">
+						<template #actions>
+							<NcActionButton @click="$store.dispatch('foodEntries/openAddModal', entry)">
+								<template #icon>
+									<NcIconSvgWrapper :svg="iconPencil" />
+								</template>
+								{{ t('calorietracker', 'Edit') }}
+							</NcActionButton>
+							<NcActionButton @click="confirmDelete(entry)">
+								<template #icon>
+									<NcIconSvgWrapper :svg="iconTrash" />
+								</template>
+								{{ t('calorietracker', 'Delete') }}
+							</NcActionButton>
+						</template>
+					</NcListItem>
 				</ul>
 			</div>
 		</template>
 
-		<p v-if="isEmpty" class="food-entry-list__empty">
-			{{ t('calorietracker', 'No entries for this day yet.') }}
-		</p>
+		<NcEmptyContent
+			v-if="isEmpty"
+			:name="t('calorietracker', 'No entries yet')"
+			:description="t('calorietracker', 'Add your first meal using the button in the sidebar.')">
+			<template #icon>
+				<NcIconSvgWrapper :svg="iconFood" />
+			</template>
+		</NcEmptyContent>
+
+		<NcDialog
+			v-if="deleteTarget"
+			:name="t('calorietracker', 'Delete entry')"
+			:message="t('calorietracker', 'Delete \"{name}\"?', { name: deleteTarget.foodName })"
+			:buttons="deleteDialogButtons"
+			@closing="deleteTarget = null" />
 	</div>
 </template>
 
 <script>
-import NcButton from '@nextcloud/vue/dist/Components/NcButton.js'
+import NcListItem from '@nextcloud/vue/dist/Components/NcListItem.js'
+import NcActionButton from '@nextcloud/vue/dist/Components/NcActionButton.js'
+import NcIconSvgWrapper from '@nextcloud/vue/dist/Components/NcIconSvgWrapper.js'
+import NcEmptyContent from '@nextcloud/vue/dist/Components/NcEmptyContent.js'
+import NcDialog from '@nextcloud/vue/dist/Components/NcDialog.js'
+
+const iconPencil = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20.71 7.04c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.37-.39-1.02-.39-1.41 0l-1.84 1.83 3.75 3.75M3 17.25V21h3.75L17.81 9.93l-3.75-3.75L3 17.25z"/></svg>'
+const iconTrash = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 4h-3.5l-1-1h-5l-1 1H5v2h14M6 19a2 2 0 002 2h8a2 2 0 002-2V7H6v12z"/></svg>'
+const iconFood = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><line x1="9" y1="3" x2="9" y2="7"/><line x1="7" y1="3" x2="7" y2="7"/><path d="M8 7 Q8 9 8 10 L8 13"/><path d="M15 3 L15 7 Q17 8 15 10 L15 13"/></svg>'
 
 export default {
 	name: 'FoodEntryList',
 
-	components: { NcButton },
+	components: { NcListItem, NcActionButton, NcIconSvgWrapper, NcEmptyContent, NcDialog },
 
 	props: {
 		groups: {
@@ -57,12 +84,31 @@ export default {
 	data() {
 		return {
 			mealOrder: ['breakfast', 'lunch', 'dinner', 'snack'],
+			deleteTarget: null,
+			iconPencil,
+			iconTrash,
+			iconFood,
 		}
 	},
 
 	computed: {
 		isEmpty() {
 			return this.mealOrder.every(type => this.groups[type].length === 0)
+		},
+
+		deleteDialogButtons() {
+			return [
+				{
+					label: t('calorietracker', 'Cancel'),
+					type: 'tertiary',
+					callback: () => { this.deleteTarget = null },
+				},
+				{
+					label: t('calorietracker', 'Delete'),
+					type: 'error',
+					callback: () => this.doDelete(),
+				},
+			]
 		},
 	},
 
@@ -85,11 +131,13 @@ export default {
 			return entries.reduce((sum, e) => sum + this.entryCalories(e), 0)
 		},
 
-		async confirmDelete(entry) {
-			if (!confirm(t('calorietracker', 'Delete "{name}"?', { name: entry.foodName }))) {
-				return
-			}
-			await this.$store.dispatch('foodEntries/deleteEntry', entry.id)
+		confirmDelete(entry) {
+			this.deleteTarget = entry
+		},
+
+		async doDelete() {
+			await this.$store.dispatch('foodEntries/deleteEntry', this.deleteTarget.id)
+			this.deleteTarget = null
 		},
 	},
 }
@@ -120,33 +168,5 @@ export default {
 	list-style: none;
 	margin: 0;
 	padding: 0;
-}
-
-.food-entry-list__item {
-	display: flex;
-	align-items: center;
-	gap: 8px;
-	padding: 4px 0;
-}
-
-.food-entry-list__item-name {
-	flex: 1;
-}
-
-.food-entry-list__item-detail {
-	color: var(--color-text-maxcontrast);
-	font-size: 0.9em;
-	white-space: nowrap;
-}
-
-.food-entry-list__item-actions {
-	display: flex;
-	gap: 2px;
-}
-
-.food-entry-list__empty {
-	color: var(--color-text-maxcontrast);
-	text-align: center;
-	margin-top: 32px;
 }
 </style>

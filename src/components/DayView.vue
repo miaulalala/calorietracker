@@ -29,24 +29,18 @@
 		<!-- Macro breakdown -->
 		<div v-if="macroTotals" class="day-view__macros">
 			<div class="day-view__macro">
-				<div class="day-view__macro-bar-wrap">
-					<div class="day-view__macro-bar day-view__macro-bar--protein" :style="{ width: macroTotals.protein.pct + '%' }" />
-				</div>
 				<span class="day-view__macro-label">{{ t('calorietracker', 'Protein') }}</span>
+				<NcProgressBar class="day-view__macro-bar day-view__macro-bar--protein" :value="macroTotals.protein.pct" />
 				<span class="day-view__macro-value">{{ macroTotals.protein.grams }}g &middot; {{ macroTotals.protein.kcal }} kcal &middot; {{ macroTotals.protein.pct }}%</span>
 			</div>
 			<div class="day-view__macro">
-				<div class="day-view__macro-bar-wrap">
-					<div class="day-view__macro-bar day-view__macro-bar--carbs" :style="{ width: macroTotals.carbs.pct + '%' }" />
-				</div>
 				<span class="day-view__macro-label">{{ t('calorietracker', 'Carbs') }}</span>
+				<NcProgressBar class="day-view__macro-bar day-view__macro-bar--carbs" :value="macroTotals.carbs.pct" />
 				<span class="day-view__macro-value">{{ macroTotals.carbs.grams }}g &middot; {{ macroTotals.carbs.kcal }} kcal &middot; {{ macroTotals.carbs.pct }}%</span>
 			</div>
 			<div class="day-view__macro">
-				<div class="day-view__macro-bar-wrap">
-					<div class="day-view__macro-bar day-view__macro-bar--fat" :style="{ width: macroTotals.fat.pct + '%' }" />
-				</div>
 				<span class="day-view__macro-label">{{ t('calorietracker', 'Fat') }}</span>
+				<NcProgressBar class="day-view__macro-bar day-view__macro-bar--fat" :value="macroTotals.fat.pct" />
 				<span class="day-view__macro-value">{{ macroTotals.fat.grams }}g &middot; {{ macroTotals.fat.kcal }} kcal &middot; {{ macroTotals.fat.pct }}%</span>
 			</div>
 		</div>
@@ -59,6 +53,7 @@
 <script>
 import { mapGetters, mapState } from 'vuex'
 import NcButton from '@nextcloud/vue/dist/Components/NcButton.js'
+import NcProgressBar from '@nextcloud/vue/dist/Components/NcProgressBar.js'
 import FoodEntryList from './FoodEntryList.vue'
 import { toLocalDateString } from '../utils/date.js'
 
@@ -67,6 +62,7 @@ export default {
 
 	components: {
 		NcButton,
+		NcProgressBar,
 		FoodEntryList,
 	},
 
@@ -163,23 +159,13 @@ export default {
 	letter-spacing: 0.04em;
 }
 
-.day-view__macro-bar-wrap {
-	height: 8px;
-	background: var(--color-background-dark);
-	border-radius: 4px;
-	overflow: hidden;
-}
-
 .day-view__macro-bar {
-	height: 100%;
-	border-radius: 4px;
-	transition: width 0.3s ease;
-	max-width: 100%;
+	flex: 1;
 }
 
-.day-view__macro-bar--protein { background: #4caf50; }
-.day-view__macro-bar--carbs   { background: #ff9800; }
-.day-view__macro-bar--fat     { background: #f44336; }
+.day-view__macro-bar--protein :deep(.progress-bar) { background: #4caf50; }
+.day-view__macro-bar--carbs   :deep(.progress-bar) { background: #ff9800; }
+.day-view__macro-bar--fat     :deep(.progress-bar) { background: #f44336; }
 
 .day-view__macro-value {
 	font-size: 0.85em;

@@ -26,16 +26,15 @@ export default {
 		},
 
 		macroTotals(state, getters) {
+			if (state.entries.length === 0) return null
 			let proteinG = 0
 			let carbsG = 0
 			let fatG = 0
-			let hasMacros = false
 			for (const e of state.entries) {
-				if (e.proteinPer100g !== null) { proteinG += Math.round(e.proteinPer100g * e.amountGrams / 100); hasMacros = true }
-				if (e.carbsPer100g !== null) { carbsG += Math.round(e.carbsPer100g * e.amountGrams / 100); hasMacros = true }
-				if (e.fatPer100g !== null) { fatG += Math.round(e.fatPer100g * e.amountGrams / 100); hasMacros = true }
+				if (e.proteinPer100g != null) proteinG += Math.round(e.proteinPer100g * e.amountGrams / 100)
+				if (e.carbsPer100g != null) carbsG += Math.round(e.carbsPer100g * e.amountGrams / 100)
+				if (e.fatPer100g != null) fatG += Math.round(e.fatPer100g * e.amountGrams / 100)
 			}
-			if (!hasMacros) return null
 			const totalKcal = getters.totalCalories || 1
 			return {
 				protein: { grams: proteinG, kcal: proteinG * 4, pct: Math.round(proteinG * 4 / totalKcal * 100) },
