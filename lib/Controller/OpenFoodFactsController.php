@@ -17,14 +17,39 @@ use OCP\Http\Client\IClientService;
 use OCP\ICache;
 use OCP\ICacheFactory;
 use OCP\IRequest;
-use OCP\L10N\IFactory as IL10NFactory;
 use Psr\Log\LoggerInterface;
 
+/**
+ * Searches the USDA FoodData Central database, which covers both whole/generic
+ * foods (Foundation, SR Legacy) and branded packaged products.
+ * Foundation and SR Legacy results are sorted above Branded ones so that a
+ * search for "banana" surfaces "Bananas, raw" before branded banana products.
+ */
 class OpenFoodFactsController extends Controller {
-	private const OFF_SEARCH_URL = 'https://world.openfoodfacts.org/cgi/search.pl';
+	private const FDC_SEARCH_URL = 'https://api.nal.usda.gov/fdc/v1/foods/search';
+
+	/**
+	 * Public demo key provided by api.data.gov — limited to ~30 req/hour per IP.
+	 * Users can configure their own free key at https://fdc.nal.usda.gov/api-key-signup
+	 */
+	private const FDC_API_KEY = 'DEMO_KEY';
+
 	private const USER_AGENT = 'NextcloudCalorieTracker/1.0 (https://nextcloud.com)';
-	private const TTL_SEARCH = 24 * 3600;      // 24 h — new products may appear
-	private const TTL_PRODUCT = 7 * 24 * 3600; // 7 d  — individual products are stable
+	private const TTL_SEARCH  = 7 * 24 * 3600; // 7 d — nutritional data is very stable
+
+	// USDA FDC nutrient IDs
+	private const NUTRIENT_KCAL    = 1008;
+	private const NUTRIENT_PROTEIN = 1003;
+	private const NUTRIENT_CARBS   = 1005; // Carbohydrate, by difference
+	private const NUTRIENT_FAT     = 1004; // Total lipid (fat)
+
+	// Lower number = shown first; whole-food datasets precede branded products
+	private const DATA_TYPE_ORDER = [
+		'Foundation'     => 0,
+		'SR Legacy'      => 1,
+		'Survey (FNDDS)' => 2,
+		'Branded'        => 3,
+	];
 
 	private ICache $cache;
 
@@ -32,7 +57,6 @@ class OpenFoodFactsController extends Controller {
 		IRequest $request,
 		private IClientService $clientService,
 		private LoggerInterface $logger,
-		private IL10NFactory $l10nFactory,
 		ICacheFactory $cacheFactory,
 	) {
 		parent::__construct('calorietracker', $request);
@@ -46,11 +70,7 @@ class OpenFoodFactsController extends Controller {
 			return new JSONResponse([]);
 		}
 
-		// Normalise to a 2-letter code ("de_DE" → "de")
-		$userLang = substr($this->l10nFactory->findLanguage('calorietracker'), 0, 2);
-
-		// Cache key is language-aware: different users get results in their language
-		$searchKey = 'search:' . $userLang . ':' . md5(strtolower($query));
+		$searchKey = 'fdcsearch:' . md5(strtolower($query));
 
 		$cached = $this->cache->get($searchKey);
 		if ($cached !== null) {
@@ -59,74 +79,74 @@ class OpenFoodFactsController extends Controller {
 
 		try {
 			$client = $this->clientService->newClient();
-
-			// Request the original name, English, and the user's language variant.
-			// OFF returns product_name in the lc-preferred language when a translation exists.
-			$langNameField = 'product_name_' . $userLang;
-			$fields = implode(',', array_unique([
-				'code', 'product_name', 'product_name_en', $langNameField, 'nutriments',
-			]));
-
-			$response = $client->get(self::OFF_SEARCH_URL, [
+			$response = $client->get(self::FDC_SEARCH_URL, [
 				'query' => [
-					'search_terms' => $query,
-					'search_simple' => '1',
-					'action' => 'process',
-					'json' => '1',
-					'lc' => $userLang,
-					'fields' => $fields,
-					'page_size' => '10',
+					'api_key'  => self::FDC_API_KEY,
+					'query'    => $query,
+					'dataType' => 'Foundation,SR Legacy,Branded Food',
+					'pageSize' => 20,
 				],
 				'headers' => ['User-Agent' => self::USER_AGENT],
 				'timeout' => 15,
 			]);
 
-			$data = json_decode($response->getBody(), true);
-			$products = $data['products'] ?? [];
+			$data  = json_decode($response->getBody(), true);
+			$foods = $data['foods'] ?? [];
 
 			$results = [];
-			foreach ($products as $product) {
-				// Name priority: user-language translation → English → original product_name
-				$name = trim($product[$langNameField] ?? '')
-					?: trim($product['product_name_en'] ?? '')
-					?: trim($product['product_name'] ?? '');
-
-				$kcal = $product['nutriments']['energy-kcal_100g'] ?? null;
-
-				if ($name === '' || $kcal === null) {
+			foreach ($foods as $food) {
+				$name = trim($food['description'] ?? '');
+				if ($name === '') {
 					continue;
 				}
 
-				$protein = $product['nutriments']['proteins_100g'] ?? null;
-				$carbs = $product['nutriments']['carbohydrates_100g'] ?? null;
-				$fat = $product['nutriments']['fat_100g'] ?? null;
-
-				$result = [
-					'name' => $name,
-					'caloriesPer100g' => (int) round((float) $kcal),
-					'proteinPer100g' => $protein !== null ? (int) round((float) $protein) : null,
-					'carbsPer100g' => $carbs !== null ? (int) round((float) $carbs) : null,
-					'fatPer100g' => $fat !== null ? (int) round((float) $fat) : null,
-				];
-
-				$barcode = trim($product['code'] ?? '');
-				if ($barcode !== '') {
-					$result['barcode'] = $barcode;
-					$this->cache->set('product:' . $barcode, $result, self::TTL_PRODUCT);
+				// Index nutrients by nutrientId for fast lookup
+				$nutrients = [];
+				foreach ($food['foodNutrients'] ?? [] as $n) {
+					$id = $n['nutrientId'] ?? null;
+					if ($id !== null) {
+						$nutrients[(int) $id] = $n['value'] ?? null;
+					}
 				}
 
-				$results[] = $result;
+				$kcal = $nutrients[self::NUTRIENT_KCAL] ?? null;
+				if ($kcal === null) {
+					continue;
+				}
+
+				$results[] = [
+					'name'           => $name,
+					'caloriesPer100g' => (int) round((float) $kcal),
+					'proteinPer100g'  => isset($nutrients[self::NUTRIENT_PROTEIN])
+						? (int) round((float) $nutrients[self::NUTRIENT_PROTEIN]) : null,
+					'carbsPer100g'    => isset($nutrients[self::NUTRIENT_CARBS])
+						? (int) round((float) $nutrients[self::NUTRIENT_CARBS]) : null,
+					'fatPer100g'      => isset($nutrients[self::NUTRIENT_FAT])
+						? (int) round((float) $nutrients[self::NUTRIENT_FAT]) : null,
+					'_order'          => self::DATA_TYPE_ORDER[$food['dataType'] ?? ''] ?? 99,
+				];
 			}
+
+			// Whole foods (Foundation, SR Legacy) first, branded products last
+			usort($results, static fn (array $a, array $b): int => $a['_order'] <=> $b['_order']);
+
+			$results = array_slice(
+				array_map(static function (array $r): array {
+					unset($r['_order']);
+					return $r;
+				}, $results),
+				0, 10
+			);
 
 			$this->cache->set($searchKey, $results, self::TTL_SEARCH);
 
 			return new JSONResponse($results);
 		} catch (\Exception $e) {
-			$this->logger->error('Open Food Facts search failed for query "{query}": {message}', [
-				'query' => $query,
-				'message' => $e->getMessage(),
+			$this->logger->error('USDA FDC search failed for query "{query}": {message}', [
+				'query'     => $query,
+				'message'   => $e->getMessage(),
 				'exception' => $e,
-				'app' => 'calorietracker',
+				'app'       => 'calorietracker',
 			]);
 			return new JSONResponse(['error' => 'Search failed'], Http::STATUS_BAD_GATEWAY);
 		}
