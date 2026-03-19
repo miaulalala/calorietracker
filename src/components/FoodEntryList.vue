@@ -52,7 +52,7 @@
 		<NcDialog
 			v-if="deleteTarget"
 			:name="t('calorietracker', 'Delete entry')"
-			:message="t('calorietracker', 'Delete \"{name}\"?', { name: deleteTarget.foodName })"
+			:message="deleteMessage"
 			:buttons="deleteDialogButtons"
 			@closing="deleteTarget = null" />
 	</div>
@@ -94,6 +94,12 @@ export default {
 	computed: {
 		isEmpty() {
 			return this.mealOrder.every(type => this.groups[type].length === 0)
+		},
+
+		deleteMessage() {
+			return this.deleteTarget
+				? t('calorietracker', 'Delete "{name}"?', { name: this.deleteTarget.foodName })
+				: ''
 		},
 
 		deleteDialogButtons() {
