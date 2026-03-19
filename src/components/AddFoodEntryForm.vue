@@ -5,7 +5,9 @@
 
 <template>
 	<form class="food-entry-form" @submit.prevent="submit">
-		<h3>{{ editingEntry ? t('calorietracker', 'Edit entry') : t('calorietracker', 'Add food') }}</h3>
+		<h2 class="food-entry-form__title">
+			{{ editingEntry ? t('calorietracker', 'Edit entry') : t('calorietracker', 'Add food') }}
+		</h2>
 
 		<!-- Search — hidden in edit mode -->
 		<div v-if="!editingEntry && !showManual" class="food-entry-form__search">
@@ -55,14 +57,18 @@
 
 		<!-- Manual fields — shown after selecting a result, clicking "Add manually", or in edit mode -->
 		<template v-if="showManual || editingEntry">
-			<div class="food-entry-form__fields">
+			<!-- Food name: full width -->
+			<div class="food-entry-form__fields food-entry-form__fields--single">
 				<NcInputField
 					v-model="form.foodName"
 					type="text"
 					:label="t('calorietracker', 'Food name')"
 					:placeholder="t('calorietracker', 'e.g. Oatmeal')"
 					required />
+			</div>
 
+			<!-- kcal + amount side by side -->
+			<div class="food-entry-form__fields food-entry-form__fields--two">
 				<NcInputField
 					v-model.number="form.caloriesPer100g"
 					type="number"
@@ -76,7 +82,10 @@
 					:label="t('calorietracker', 'Amount (g)')"
 					min="1"
 					required />
+			</div>
 
+			<!-- Meal + date side by side -->
+			<div class="food-entry-form__fields food-entry-form__fields--two">
 				<div class="food-entry-form__field-wrap">
 					<label class="food-entry-form__select-label">{{ t('calorietracker', 'Meal') }}</label>
 					<NcSelect
@@ -94,31 +103,35 @@
 						:label="t('calorietracker', 'Date')"
 						required />
 				</div>
+			</div>
 
+			<!-- Calorie preview -->
+			<div v-if="form.caloriesPer100g > 0 && form.amountGrams > 0" class="food-entry-form__preview">
+				≈ {{ calculatedCalories }} kcal
+			</div>
+
+			<!-- Macros: 3 columns -->
+			<p class="food-entry-form__section-label">
+				{{ t('calorietracker', 'Macros per 100g (optional)') }}
+			</p>
+			<div class="food-entry-form__fields food-entry-form__fields--three">
 				<NcInputField
 					v-model.number="form.proteinPer100g"
 					type="number"
-					:label="t('calorietracker', 'Protein (g/100g)')"
-					:placeholder="t('calorietracker', 'optional')"
+					:label="t('calorietracker', 'Protein (g)')"
 					min="0" />
 
 				<NcInputField
 					v-model.number="form.carbsPer100g"
 					type="number"
-					:label="t('calorietracker', 'Carbs (g/100g)')"
-					:placeholder="t('calorietracker', 'optional')"
+					:label="t('calorietracker', 'Carbs (g)')"
 					min="0" />
 
 				<NcInputField
 					v-model.number="form.fatPer100g"
 					type="number"
-					:label="t('calorietracker', 'Fat (g/100g)')"
-					:placeholder="t('calorietracker', 'optional')"
+					:label="t('calorietracker', 'Fat (g)')"
 					min="0" />
-			</div>
-
-			<div v-if="form.caloriesPer100g > 0 && form.amountGrams > 0" class="food-entry-form__preview">
-				≈ {{ calculatedCalories }} kcal
 			</div>
 		</template>
 
@@ -309,19 +322,34 @@ export default {
 
 <style scoped>
 .food-entry-form {
-	padding: 16px;
-	background: var(--color-main-background);
+	max-width: 560px;
+	margin: 0 auto;
+	padding: 40px 24px 24px;
 }
 
-.food-entry-form h3 {
-	margin-top: 0;
+.food-entry-form__title {
+	margin: 0 0 28px;
+	font-size: 1.4em;
+	font-weight: bold;
+	text-align: center;
 }
 
 .food-entry-form__fields {
 	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-	gap: 12px;
-	margin-bottom: 12px;
+	gap: 16px;
+	margin-bottom: 16px;
+}
+
+.food-entry-form__fields--single {
+	grid-template-columns: 1fr;
+}
+
+.food-entry-form__fields--two {
+	grid-template-columns: 1fr 1fr;
+}
+
+.food-entry-form__fields--three {
+	grid-template-columns: 1fr 1fr 1fr;
 }
 
 .food-entry-form__field-wrap {
@@ -332,6 +360,15 @@ export default {
 
 .food-entry-form__select-label {
 	font-size: 0.9em;
+	color: var(--color-text-maxcontrast);
+}
+
+.food-entry-form__section-label {
+	margin: 4px 0 8px;
+	font-size: 0.85em;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
 	color: var(--color-text-maxcontrast);
 }
 
