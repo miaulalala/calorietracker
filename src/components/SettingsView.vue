@@ -69,15 +69,24 @@
 			</p>
 
 			<h3 class="settings-section__subtitle">
+				{{ t('calorietracker', 'Biological sex') }}
+			</h3>
+			<div class="settings-section__radio-group settings-section__radio-group--inline">
+				<NcCheckboxRadioSwitch
+					v-for="opt in sexOptions"
+					:key="opt.id"
+					v-model="tdee.sex"
+					:value="opt.id"
+					name="tdee-sex"
+					type="radio">
+					{{ opt.label }}
+				</NcCheckboxRadioSwitch>
+			</div>
+
+			<h3 class="settings-section__subtitle">
 				{{ t('calorietracker', 'Body measurements') }}
 			</h3>
-			<div class="settings-section__row settings-section__row--two">
-				<NcSelect
-					v-model="tdee.sexOption"
-					:aria-label="t('calorietracker', 'Biological sex')"
-					:options="sexOptions"
-					:clearable="false"
-					label="label" />
+			<div class="settings-section__row settings-section__row--three">
 				<NcInputField
 					v-model.number="tdee.age"
 					type="number"
@@ -85,9 +94,6 @@
 					max="120"
 					:label="t('calorietracker', 'Age (years)')"
 					:placeholder="t('calorietracker', 'e.g. 30')" />
-			</div>
-
-			<div class="settings-section__row settings-section__row--two">
 				<NcInputField
 					v-model.number="tdee.height"
 					type="number"
@@ -107,32 +113,38 @@
 			<h3 class="settings-section__subtitle">
 				{{ t('calorietracker', 'Activity level') }}
 			</h3>
-			<div class="settings-section__row">
-				<NcSelect
-					v-model="tdee.activityOption"
-					:aria-label="t('calorietracker', 'Activity level')"
-					:options="activityOptions"
-					:clearable="false"
-					label="label" />
+			<div class="settings-section__radio-group">
+				<NcCheckboxRadioSwitch
+					v-for="opt in activityOptions"
+					:key="opt.id"
+					v-model="tdee.activity"
+					:value="opt.id"
+					name="tdee-activity"
+					type="radio">
+					{{ opt.label }}
+				</NcCheckboxRadioSwitch>
 			</div>
 
 			<h3 class="settings-section__subtitle">
 				{{ t('calorietracker', 'Goal') }}
 			</h3>
-			<div class="settings-section__row">
-				<NcSelect
-					v-model="tdee.goalOption"
-					:aria-label="t('calorietracker', 'Goal')"
-					:options="goalOptions"
-					:clearable="false"
-					label="label" />
+			<div class="settings-section__radio-group">
+				<NcCheckboxRadioSwitch
+					v-for="opt in goalOptions"
+					:key="opt.id"
+					v-model="tdee.goal"
+					:value="opt.id"
+					name="tdee-goal"
+					type="radio">
+					{{ opt.label }}
+				</NcCheckboxRadioSwitch>
 			</div>
 
 			<div class="settings-section__tdee-result" :class="{ 'settings-section__tdee-result--visible': tdeeResult !== null }">
 				<template v-if="tdeeResult !== null">
 					<span class="settings-section__tdee-value">{{ tdeeResult }} kcal/day</span>
 					<span class="settings-section__tdee-breakdown">
-						BMR {{ tdeeBMR }} × {{ tdee.activityOption.factor }} activity{{ tdee.goalOption.adjustment !== 0 ? (tdee.goalOption.adjustment > 0 ? ' + ' : ' − ') + Math.abs(tdee.goalOption.adjustment) + ' kcal adjustment' : '' }}
+						BMR {{ tdeeBMR }} × {{ selectedActivity.factor }} activity{{ selectedGoal.adjustment !== 0 ? (selectedGoal.adjustment > 0 ? ' + ' : ' − ') + Math.abs(selectedGoal.adjustment) + ' kcal adjustment' : '' }}
 					</span>
 				</template>
 			</div>
@@ -155,9 +167,9 @@ import { mapState } from 'vuex'
 import NcAppSettingsDialog from '@nextcloud/vue/dist/Components/NcAppSettingsDialog.js'
 import NcAppSettingsSection from '@nextcloud/vue/dist/Components/NcAppSettingsSection.js'
 import NcButton from '@nextcloud/vue/dist/Components/NcButton.js'
+import NcCheckboxRadioSwitch from '@nextcloud/vue/dist/Components/NcCheckboxRadioSwitch.js'
 import NcInputField from '@nextcloud/vue/dist/Components/NcInputField.js'
 import NcNoteCard from '@nextcloud/vue/dist/Components/NcNoteCard.js'
-import NcSelect from '@nextcloud/vue/dist/Components/NcSelect.js'
 
 const SEX_OPTIONS = [
 	{ id: 'male', label: 'Male', offset: 5 },
@@ -181,7 +193,7 @@ const GOAL_OPTIONS = [
 export default {
 	name: 'SettingsView',
 
-	components: { NcAppSettingsDialog, NcAppSettingsSection, NcButton, NcInputField, NcNoteCard, NcSelect },
+	components: { NcAppSettingsDialog, NcAppSettingsSection, NcButton, NcCheckboxRadioSwitch, NcInputField, NcNoteCard },
 
 	data() {
 		return {
@@ -194,12 +206,12 @@ export default {
 				dailyFatGoal: 0,
 			},
 			tdee: {
-				sexOption: SEX_OPTIONS[0],
+				sex: 'male',
 				age: null,
 				height: null,
 				weight: null,
-				activityOption: ACTIVITY_OPTIONS[1],
-				goalOption: GOAL_OPTIONS[1],
+				activity: 'light',
+				goal: 'maintain',
 			},
 			tdeeBMR: null,
 			tdeeResult: null,
@@ -216,6 +228,14 @@ export default {
 		sexOptions: () => SEX_OPTIONS,
 		activityOptions: () => ACTIVITY_OPTIONS,
 		goalOptions: () => GOAL_OPTIONS,
+
+		selectedActivity() {
+			return ACTIVITY_OPTIONS.find(o => o.id === this.tdee.activity)
+		},
+
+		selectedGoal() {
+			return GOAL_OPTIONS.find(o => o.id === this.tdee.goal)
+		},
 	},
 
 	watch: {
@@ -246,10 +266,11 @@ export default {
 		},
 
 		calculateTDEE() {
-			const { age, height, weight, sexOption, activityOption, goalOption } = this.tdee
+			const { age, height, weight, sex } = this.tdee
 			if (!age || !height || !weight) return
-			const bmr = Math.round(10 * weight + 6.25 * height - 5 * age + sexOption.offset)
-			const tdee = Math.round(bmr * activityOption.factor) + goalOption.adjustment
+			const sexOpt = SEX_OPTIONS.find(o => o.id === sex)
+			const bmr = Math.round(10 * weight + 6.25 * height - 5 * age + sexOpt.offset)
+			const tdee = Math.round(bmr * this.selectedActivity.factor) + this.selectedGoal.adjustment
 			this.tdeeBMR = bmr
 			this.tdeeResult = Math.max(1200, tdee)
 		},
@@ -291,6 +312,19 @@ export default {
 
 .settings-section__hint--top {
 	margin: 0 0 16px;
+}
+
+.settings-section__radio-group {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	margin-bottom: 16px;
+}
+
+.settings-section__radio-group--inline {
+	flex-direction: row;
+	flex-wrap: wrap;
+	gap: 8px;
 }
 
 .settings-section__row {
