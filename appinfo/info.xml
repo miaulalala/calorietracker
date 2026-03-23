@@ -8,7 +8,7 @@
     <name>Calorie Tracker</name>
     <summary>Track your daily calorie intake</summary>
     <description>Log food items with calorie information and associate them with meal types (breakfast, lunch, dinner, snack) to track your daily nutrition.</description>
-    <version>0.1.0</version>
+    <version>0.3.0</version>
     <licence>agpl</licence>
     <namespace>CalorieTracker</namespace>
     <category>health</category>
