@@ -1,15 +1,13 @@
 <!--
-  - SPDX-FileCopyrightText: 2026 Nextcloud contributors
+  - SPDX-FileCopyrightText: 2026 Anna Larch
   - SPDX-License-Identifier: AGPL-3.0-or-later
 -->
 
 <template>
-	<NcAppSettingsDialog
-		:open="open"
+	<NcAppSettingsDialog :open="open"
 		:show-navigation="true"
 		:name="t('calorietracker', 'Daily goals')"
 		@update:open="onOpenUpdate">
-
 		<!-- ── Goals section ─────────────────────────────────────────── -->
 		<NcAppSettingsSection id="goals" :name="t('calorietracker', 'Goals')">
 			<NcNoteCard v-if="saved" type="success" class="settings-section__feedback">
@@ -20,8 +18,7 @@
 				{{ t('calorietracker', 'Calories') }}
 			</h3>
 			<div class="settings-section__row">
-				<NcInputField
-					v-model.number="form.dailyCalorieGoal"
+				<NcInputField v-model.number="form.dailyCalorieGoal"
 					type="number"
 					min="0"
 					:label="t('calorietracker', 'Daily calorie goal (kcal)')"
@@ -35,20 +32,17 @@
 				{{ t('calorietracker', 'Set to 0 to disable a goal.') }}
 			</p>
 			<div class="settings-section__row settings-section__row--three">
-				<NcInputField
-					v-model.number="form.dailyProteinGoal"
+				<NcInputField v-model.number="form.dailyProteinGoal"
 					type="number"
 					min="0"
 					:label="t('calorietracker', 'Protein goal (g)')"
 					:placeholder="t('calorietracker', 'e.g. 150')" />
-				<NcInputField
-					v-model.number="form.dailyCarbsGoal"
+				<NcInputField v-model.number="form.dailyCarbsGoal"
 					type="number"
 					min="0"
 					:label="t('calorietracker', 'Carbs goal (g)')"
 					:placeholder="t('calorietracker', 'e.g. 250')" />
-				<NcInputField
-					v-model.number="form.dailyFatGoal"
+				<NcInputField v-model.number="form.dailyFatGoal"
 					type="number"
 					min="0"
 					:label="t('calorietracker', 'Fat goal (g)')"
@@ -72,8 +66,7 @@
 				{{ t('calorietracker', 'Biological sex') }}
 			</h3>
 			<div class="settings-section__radio-group settings-section__radio-group--inline">
-				<NcCheckboxRadioSwitch
-					v-for="opt in sexOptions"
+				<NcCheckboxRadioSwitch v-for="opt in SEX_OPTIONS"
 					:key="opt.id"
 					v-model="tdee.sex"
 					:value="opt.id"
@@ -87,20 +80,17 @@
 				{{ t('calorietracker', 'Body measurements') }}
 			</h3>
 			<div class="settings-section__row settings-section__row--three">
-				<NcInputField
-					v-model.number="tdee.age"
+				<NcInputField v-model.number="tdee.age"
 					type="number"
 					min="10"
 					max="120"
 					:label="t('calorietracker', 'Age (years)')" />
-				<NcInputField
-					v-model.number="tdee.height"
+				<NcInputField v-model.number="tdee.height"
 					type="number"
 					min="50"
 					max="300"
 					:label="t('calorietracker', 'Height (cm)')" />
-				<NcInputField
-					v-model.number="tdee.weight"
+				<NcInputField v-model.number="tdee.weight"
 					type="number"
 					min="20"
 					max="500"
@@ -111,8 +101,7 @@
 				{{ t('calorietracker', 'Activity level') }}
 			</h3>
 			<div class="settings-section__radio-group">
-				<NcCheckboxRadioSwitch
-					v-for="opt in activityOptions"
+				<NcCheckboxRadioSwitch v-for="opt in ACTIVITY_OPTIONS"
 					:key="opt.id"
 					v-model="tdee.activity"
 					:value="opt.id"
@@ -126,8 +115,7 @@
 				{{ t('calorietracker', 'Goal') }}
 			</h3>
 			<div class="settings-section__radio-group">
-				<NcCheckboxRadioSwitch
-					v-for="opt in goalOptions"
+				<NcCheckboxRadioSwitch v-for="opt in GOAL_OPTIONS"
 					:key="opt.id"
 					v-model="tdee.goal"
 					:value="opt.id"
@@ -137,7 +125,10 @@
 				</NcCheckboxRadioSwitch>
 			</div>
 
-			<div class="settings-section__tdee-result" :class="{ 'settings-section__tdee-result--visible': tdeeResult !== null }">
+			<div class="settings-section__tdee-result"
+				:class="{ 'settings-section__tdee-result--visible': tdeeResult !== null }"
+				aria-live="polite"
+				:aria-hidden="String(tdeeResult === null)">
 				<template v-if="tdeeResult !== null">
 					<span class="settings-section__tdee-value">{{ tdeeResult }} kcal/day</span>
 					<span class="settings-section__tdee-breakdown">
@@ -155,18 +146,20 @@
 				</NcButton>
 			</div>
 		</NcAppSettingsSection>
-
 	</NcAppSettingsDialog>
 </template>
 
-<script>
-import { mapState } from 'vuex'
-import NcAppSettingsDialog from '@nextcloud/vue/dist/Components/NcAppSettingsDialog.js'
-import NcAppSettingsSection from '@nextcloud/vue/dist/Components/NcAppSettingsSection.js'
-import NcButton from '@nextcloud/vue/dist/Components/NcButton.js'
-import NcCheckboxRadioSwitch from '@nextcloud/vue/dist/Components/NcCheckboxRadioSwitch.js'
-import NcInputField from '@nextcloud/vue/dist/Components/NcInputField.js'
-import NcNoteCard from '@nextcloud/vue/dist/Components/NcNoteCard.js'
+<script setup>
+import { ref, reactive, computed, watch } from 'vue'
+import { storeToRefs } from 'pinia'
+import { translate as t } from '@nextcloud/l10n'
+import NcAppSettingsDialog from '@nextcloud/vue/components/NcAppSettingsDialog'
+import NcAppSettingsSection from '@nextcloud/vue/components/NcAppSettingsSection'
+import NcButton from '@nextcloud/vue/components/NcButton'
+import NcCheckboxRadioSwitch from '@nextcloud/vue/components/NcCheckboxRadioSwitch'
+import NcInputField from '@nextcloud/vue/components/NcInputField'
+import NcNoteCard from '@nextcloud/vue/components/NcNoteCard'
+import { useSettingsStore } from '../stores/settings.js'
 
 const SEX_OPTIONS = [
 	{ id: 'male', label: 'Male', offset: 5 },
@@ -187,110 +180,91 @@ const GOAL_OPTIONS = [
 	{ id: 'gain', label: 'Gain weight (+500 kcal/day)', adjustment: 500 },
 ]
 
-export default {
-	name: 'SettingsView',
+const store = useSettingsStore()
+const { open, dailyCalorieGoal, dailyProteinGoal, dailyCarbsGoal, dailyFatGoal } = storeToRefs(store)
 
-	components: { NcAppSettingsDialog, NcAppSettingsSection, NcButton, NcCheckboxRadioSwitch, NcInputField, NcNoteCard },
+const saving = ref(false)
+const saved = ref(false)
+const tdeeBMR = ref(null)
+const tdeeResult = ref(null)
 
-	data() {
-		return {
-			saving: false,
-			saved: false,
-			form: {
-				dailyCalorieGoal: 0,
-				dailyProteinGoal: 0,
-				dailyCarbsGoal: 0,
-				dailyFatGoal: 0,
-			},
-			tdee: {
-				sex: 'male',
-				age: null,
-				height: null,
-				weight: null,
-				activity: 'light',
-				goal: 'maintain',
-			},
-			tdeeBMR: null,
-			tdeeResult: null,
-		}
-	},
+const form = reactive({
+	dailyCalorieGoal: 0,
+	dailyProteinGoal: 0,
+	dailyCarbsGoal: 0,
+	dailyFatGoal: 0,
+})
 
-	computed: {
-		...mapState('settings', ['dailyCalorieGoal', 'dailyProteinGoal', 'dailyCarbsGoal', 'dailyFatGoal']),
+const tdee = reactive({
+	sex: 'male',
+	age: '',
+	height: '',
+	weight: '',
+	activity: 'light',
+	goal: 'maintain',
+})
 
-		open() {
-			return this.$store.state.settings.open
-		},
+const selectedActivity = computed(() => ACTIVITY_OPTIONS.find(o => o.id === tdee.activity))
+const selectedGoal = computed(() => GOAL_OPTIONS.find(o => o.id === tdee.goal))
 
-		sexOptions: () => SEX_OPTIONS,
-		activityOptions: () => ACTIVITY_OPTIONS,
-		goalOptions: () => GOAL_OPTIONS,
+watch(open, async (isOpen) => {
+	if (isOpen) {
+		await store.fetchSettings()
+		Object.assign(form, {
+			dailyCalorieGoal: dailyCalorieGoal.value,
+			dailyProteinGoal: dailyProteinGoal.value,
+			dailyCarbsGoal: dailyCarbsGoal.value,
+			dailyFatGoal: dailyFatGoal.value,
+		})
+	}
+})
 
-		selectedActivity() {
-			return ACTIVITY_OPTIONS.find(o => o.id === this.tdee.activity)
-		},
+/**
+ *
+ * @param isOpen
+ */
+function onOpenUpdate(isOpen) {
+	if (!isOpen) {
+		store.closeSettings()
+	}
+}
 
-		selectedGoal() {
-			return GOAL_OPTIONS.find(o => o.id === this.tdee.goal)
-		},
-	},
+/**
+ *
+ */
+function calculateTDEE() {
+	const { age, height, weight, sex } = tdee
+	if (!age || !height || !weight) return
+	const sexOpt = SEX_OPTIONS.find(o => o.id === sex)
+	const bmr = Math.round(10 * weight + 6.25 * height - 5 * age + sexOpt.offset)
+	const result = Math.round(bmr * selectedActivity.value.factor) + selectedGoal.value.adjustment
+	tdeeBMR.value = bmr
+	tdeeResult.value = Math.max(1200, result)
+}
 
-	watch: {
-		dailyCalorieGoal(v) { this.form.dailyCalorieGoal = v },
-		dailyProteinGoal(v) { this.form.dailyProteinGoal = v },
-		dailyCarbsGoal(v) { this.form.dailyCarbsGoal = v },
-		dailyFatGoal(v) { this.form.dailyFatGoal = v },
+/**
+ *
+ */
+function applyTDEE() {
+	form.dailyCalorieGoal = tdeeResult.value
+}
 
-		open(isOpen) {
-			if (isOpen) {
-				this.$store.dispatch('settings/fetchSettings').then(() => {
-					this.form = {
-						dailyCalorieGoal: this.dailyCalorieGoal,
-						dailyProteinGoal: this.dailyProteinGoal,
-						dailyCarbsGoal: this.dailyCarbsGoal,
-						dailyFatGoal: this.dailyFatGoal,
-					}
-				})
-			}
-		},
-	},
-
-	methods: {
-		onOpenUpdate(open) {
-			if (!open) {
-				this.$store.dispatch('settings/closeSettings')
-			}
-		},
-
-		calculateTDEE() {
-			const { age, height, weight, sex } = this.tdee
-			if (!age || !height || !weight) return
-			const sexOpt = SEX_OPTIONS.find(o => o.id === sex)
-			const bmr = Math.round(10 * weight + 6.25 * height - 5 * age + sexOpt.offset)
-			const tdee = Math.round(bmr * this.selectedActivity.factor) + this.selectedGoal.adjustment
-			this.tdeeBMR = bmr
-			this.tdeeResult = Math.max(1200, tdee)
-		},
-
-		applyTDEE() {
-			this.form.dailyCalorieGoal = this.tdeeResult
-		},
-
-		async save() {
-			this.saving = true
-			this.saved = false
-			try {
-				await this.$store.dispatch('settings/saveSettings', this.form)
-				this.saved = true
-				setTimeout(() => {
-					this.saved = false
-					this.$store.dispatch('settings/closeSettings')
-				}, 1000)
-			} finally {
-				this.saving = false
-			}
-		},
-	},
+/**
+ *
+ */
+async function save() {
+	saving.value = true
+	saved.value = false
+	try {
+		await store.saveSettings({ ...form })
+		saved.value = true
+		setTimeout(() => {
+			saved.value = false
+			store.closeSettings()
+		}, 1000)
+	} finally {
+		saving.value = false
+	}
 }
 </script>
 

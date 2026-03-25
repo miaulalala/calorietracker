@@ -1,5 +1,5 @@
 <!--
-  - SPDX-FileCopyrightText: 2026 Nextcloud contributors
+  - SPDX-FileCopyrightText: 2026 Anna Larch
   - SPDX-License-Identifier: AGPL-3.0-or-later
 -->
 
@@ -9,39 +9,27 @@
 		<NcAppContent>
 			<router-view />
 		</NcAppContent>
-		<NcModal
-			v-if="addModalOpen"
+		<NcModal v-if="addModalOpen"
 			size="full"
 			:name="editingEntry ? t('calorietracker', 'Edit entry') : t('calorietracker', 'Add food')"
-			@close="$store.dispatch('foodEntries/closeAddModal')">
+			@close="store.closeAddModal()">
 			<AddFoodEntryForm />
 		</NcModal>
 		<SettingsView />
 	</NcContent>
 </template>
 
-<script>
-import { mapState } from 'vuex'
-import NcContent from '@nextcloud/vue/dist/Components/NcContent.js'
-import NcAppContent from '@nextcloud/vue/dist/Components/NcAppContent.js'
-import NcModal from '@nextcloud/vue/dist/Components/NcModal.js'
+<script setup>
+import { storeToRefs } from 'pinia'
+import { translate as t } from '@nextcloud/l10n'
+import NcContent from '@nextcloud/vue/components/NcContent'
+import NcAppContent from '@nextcloud/vue/components/NcAppContent'
+import NcModal from '@nextcloud/vue/components/NcModal'
 import DaySidebar from './components/DaySidebar.vue'
 import AddFoodEntryForm from './components/AddFoodEntryForm.vue'
 import SettingsView from './components/SettingsView.vue'
+import { useFoodEntriesStore } from './stores/foodEntries.js'
 
-export default {
-	name: 'App',
-	components: {
-		NcContent,
-		NcAppContent,
-		NcModal,
-		DaySidebar,
-		AddFoodEntryForm,
-		SettingsView,
-	},
-
-	computed: {
-		...mapState('foodEntries', ['addModalOpen', 'editingEntry']),
-	},
-}
+const store = useFoodEntriesStore()
+const { addModalOpen, editingEntry } = storeToRefs(store)
 </script>
