@@ -1,16 +1,13 @@
 /**
- * SPDX-FileCopyrightText: 2026 Nextcloud contributors
+ * SPDX-FileCopyrightText: 2026 Anna Larch
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
-import Vue from 'vue'
-import Router from 'vue-router'
+import { createRouter, createWebHashHistory } from 'vue-router'
 import DayView from './components/DayView.vue'
 
-Vue.use(Router)
-
-export default new Router({
-	mode: 'hash',
+export default createRouter({
+	history: createWebHashHistory(),
 	routes: [
 		{
 			path: '/',

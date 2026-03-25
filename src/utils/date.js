@@ -5,7 +5,7 @@
 
 /**
  * Format a Date as a local YYYY-MM-DD string (not UTC).
- * @param {Date} d
+ * @param {Date} d - the date to format
  * @return {string}
  */
 export function toLocalDateString(d = new Date()) {

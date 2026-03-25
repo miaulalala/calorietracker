@@ -1,5 +1,5 @@
 <!--
-  - SPDX-FileCopyrightText: 2026 Nextcloud contributors
+  - SPDX-FileCopyrightText: 2026 Anna Larch
   - SPDX-License-Identifier: AGPL-3.0-or-later
 -->
 
@@ -7,14 +7,14 @@
 	<div class="day-view">
 		<!-- Date navigation -->
 		<div class="day-view__header">
-			<NcButton type="tertiary" :aria-label="t('calorietracker', 'Previous day')" @click="changeDay(-1)">
-				‹
+			<NcButton type="tertiary" :ariaLabel="t('calorietracker', 'Previous day')" @click="changeDay(-1)">
+				<template #icon>‹</template>
 			</NcButton>
 			<h2 class="day-view__date">
 				{{ formattedDate }}
 			</h2>
-			<NcButton type="tertiary" :aria-label="t('calorietracker', 'Next day')" @click="changeDay(1)">
-				›
+			<NcButton type="tertiary" :ariaLabel="t('calorietracker', 'Next day')" @click="changeDay(1)">
+				<template #icon>›</template>
 			</NcButton>
 			<NcButton v-if="!isToday" type="tertiary" @click="goToToday">
 				{{ t('calorietracker', 'Today') }}
@@ -28,7 +28,7 @@
 					<span>{{ t('calorietracker', '{kcal} / {goal} kcal', { kcal: totalCalories, goal: calorieGoal }) }}</span>
 					<span class="day-view__summary-pct">{{ caloriePct }}%</span>
 				</div>
-				<NcProgressBar class="day-view__calorie-bar" :value="Math.min(caloriePct, 100)" />
+				<NcProgressBar class="day-view__calorie-bar" :value="Math.min(caloriePct, 100)" aria-hidden="true" />
 			</template>
 			<template v-else>
 				{{ t('calorietracker', 'Total: {kcal} kcal', { kcal: totalCalories }) }}
@@ -39,17 +39,17 @@
 		<div v-if="macroTotalsWithGoals" class="day-view__macros">
 			<div class="day-view__macro">
 				<span class="day-view__macro-label">{{ t('calorietracker', 'Protein') }}</span>
-				<NcProgressBar class="day-view__macro-bar day-view__macro-bar--protein" :value="macroTotalsWithGoals.protein.barPct" />
+				<NcProgressBar class="day-view__macro-bar day-view__macro-bar--protein" :value="macroTotalsWithGoals.protein.barPct" aria-hidden="true" />
 				<span class="day-view__macro-value">{{ macroTotalsWithGoals.protein.grams }}g<template v-if="proteinGoal > 0"> / {{ proteinGoal }}g</template></span>
 			</div>
 			<div class="day-view__macro">
 				<span class="day-view__macro-label">{{ t('calorietracker', 'Carbs') }}</span>
-				<NcProgressBar class="day-view__macro-bar day-view__macro-bar--carbs" :value="macroTotalsWithGoals.carbs.barPct" />
+				<NcProgressBar class="day-view__macro-bar day-view__macro-bar--carbs" :value="macroTotalsWithGoals.carbs.barPct" aria-hidden="true" />
 				<span class="day-view__macro-value">{{ macroTotalsWithGoals.carbs.grams }}g<template v-if="carbsGoal > 0"> / {{ carbsGoal }}g</template></span>
 			</div>
 			<div class="day-view__macro">
 				<span class="day-view__macro-label">{{ t('calorietracker', 'Fat') }}</span>
-				<NcProgressBar class="day-view__macro-bar day-view__macro-bar--fat" :value="macroTotalsWithGoals.fat.barPct" />
+				<NcProgressBar class="day-view__macro-bar day-view__macro-bar--fat" :value="macroTotalsWithGoals.fat.barPct" aria-hidden="true" />
 				<span class="day-view__macro-value">{{ macroTotalsWithGoals.fat.grams }}g<template v-if="fatGoal > 0"> / {{ fatGoal }}g</template></span>
 			</div>
 		</div>
@@ -59,85 +59,80 @@
 	</div>
 </template>
 
-<script>
-import { mapGetters, mapState } from 'vuex'
-import NcButton from '@nextcloud/vue/dist/Components/NcButton.js'
-import NcProgressBar from '@nextcloud/vue/dist/Components/NcProgressBar.js'
+<script setup>
+import { computed, onMounted } from 'vue'
+import { storeToRefs } from 'pinia'
+import { translate as t } from '@nextcloud/l10n'
+import NcButton from '@nextcloud/vue/components/NcButton'
+import NcProgressBar from '@nextcloud/vue/components/NcProgressBar'
 import FoodEntryList from './FoodEntryList.vue'
+import { useFoodEntriesStore } from '../stores/foodEntries.js'
+import { useSettingsStore } from '../stores/settings.js'
 import { toLocalDateString } from '../utils/date.js'
 
-export default {
-	name: 'DayView',
+const foodEntriesStore = useFoodEntriesStore()
+const settingsStore = useSettingsStore()
 
-	components: {
-		NcButton,
-		NcProgressBar,
-		FoodEntryList,
-	},
+const { currentDate } = storeToRefs(foodEntriesStore)
+const { dailyCalorieGoal: calorieGoal, dailyProteinGoal: proteinGoal, dailyCarbsGoal: carbsGoal, dailyFatGoal: fatGoal } = storeToRefs(settingsStore)
 
-	computed: {
-		...mapState('foodEntries', ['currentDate']),
-		...mapState('settings', {
-			calorieGoal: 'dailyCalorieGoal',
-			proteinGoal: 'dailyProteinGoal',
-			carbsGoal: 'dailyCarbsGoal',
-			fatGoal: 'dailyFatGoal',
-		}),
-		...mapGetters('foodEntries', ['totalCalories', 'entriesByMealType', 'macroTotals']),
+const totalCalories = computed(() => foodEntriesStore.totalCalories)
+const entriesByMealType = computed(() => foodEntriesStore.entriesByMealType)
+const macroTotals = computed(() => foodEntriesStore.macroTotals)
 
-		caloriePct() {
-			if (!this.calorieGoal) return 0
-			return Math.round(this.totalCalories / this.calorieGoal * 100)
-		},
+const caloriePct = computed(() => {
+	if (!calorieGoal.value) return 0
+	return Math.round(totalCalories.value / calorieGoal.value * 100)
+})
 
-		macroTotalsWithGoals() {
-			if (!this.macroTotals) return null
-			const withBar = (macro, goal) => ({
-				...macro,
-				barPct: goal > 0
-					? Math.min(Math.round(macro.grams / goal * 100), 100)
-					: macro.pct,
-			})
-			return {
-				protein: withBar(this.macroTotals.protein, this.proteinGoal),
-				carbs:   withBar(this.macroTotals.carbs, this.carbsGoal),
-				fat:     withBar(this.macroTotals.fat, this.fatGoal),
-			}
-		},
+const macroTotalsWithGoals = computed(() => {
+	if (!macroTotals.value) return null
+	const withBar = (macro, goal) => ({
+		...macro,
+		barPct: goal > 0
+			? Math.min(Math.round(macro.grams / goal * 100), 100)
+			: macro.pct,
+	})
+	return {
+		protein: withBar(macroTotals.value.protein, proteinGoal.value),
+		carbs: withBar(macroTotals.value.carbs, carbsGoal.value),
+		fat: withBar(macroTotals.value.fat, fatGoal.value),
+	}
+})
 
-		formattedDate() {
-			const [year, month, day] = this.currentDate.split('-')
-			return new Date(year, month - 1, day).toLocaleDateString(undefined, {
-				weekday: 'long',
-				year: 'numeric',
-				month: 'long',
-				day: 'numeric',
-			})
-		},
+const formattedDate = computed(() => {
+	const [year, month, day] = currentDate.value.split('-')
+	return new Date(year, month - 1, day).toLocaleDateString(undefined, {
+		weekday: 'long',
+		year: 'numeric',
+		month: 'long',
+		day: 'numeric',
+	})
+})
 
-		isToday() {
-			return this.currentDate === toLocalDateString()
-		},
-	},
+const isToday = computed(() => currentDate.value === toLocalDateString())
 
-	created() {
-		this.$store.dispatch('foodEntries/fetchEntries')
-	},
-
-	methods: {
-		changeDay(delta) {
-			const [year, month, day] = this.currentDate.split('-').map(Number)
-			const date = new Date(year, month - 1, day)
-			date.setDate(date.getDate() + delta)
-			this.$store.dispatch('foodEntries/setDate', toLocalDateString(date))
-		},
-
-		goToToday() {
-			this.$store.dispatch('foodEntries/setDate', toLocalDateString())
-		},
-
-	},
+/**
+ *
+ * @param delta
+ */
+function changeDay(delta) {
+	const [year, month, day] = currentDate.value.split('-').map(Number)
+	const date = new Date(year, month - 1, day)
+	date.setDate(date.getDate() + delta)
+	foodEntriesStore.setDate(toLocalDateString(date))
 }
+
+/**
+ *
+ */
+function goToToday() {
+	foodEntriesStore.setDate(toLocalDateString())
+}
+
+onMounted(() => {
+	foodEntriesStore.fetchEntries()
+})
 </script>
 
 <style scoped>
