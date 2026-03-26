@@ -35,21 +35,18 @@
 				<NcInputField v-model.number="form.dailyProteinPct"
 					type="number"
 					min="0"
-					max="100"
 					:disabled="!form.dailyCalorieGoal"
 					:label="t('calorietracker', 'Protein (%)')"
 					:placeholder="t('calorietracker', 'e.g. 30')" />
 				<NcInputField v-model.number="form.dailyCarbsPct"
 					type="number"
 					min="0"
-					max="100"
 					:disabled="!form.dailyCalorieGoal"
 					:label="t('calorietracker', 'Carbs (%)')"
 					:placeholder="t('calorietracker', 'e.g. 45')" />
 				<NcInputField v-model.number="form.dailyFatPct"
 					type="number"
 					min="0"
-					max="100"
 					:disabled="!form.dailyCalorieGoal"
 					:label="t('calorietracker', 'Fat (%)')"
 					:placeholder="t('calorietracker', 'e.g. 25')" />
@@ -243,7 +240,7 @@ const macroPctToGrams = computed(() => {
  */
 function gramsToPercent(grams, kcalPerGram, calorieGoal) {
 	if (!calorieGoal) return 0
-	return Math.min(Math.round(grams * kcalPerGram / calorieGoal * 100), 100)
+	return Math.round(grams * kcalPerGram / calorieGoal * 100)
 }
 
 watch(open, async (isOpen) => {
@@ -313,12 +310,13 @@ async function save() {
 	saved.value = false
 	const cal = form.dailyCalorieGoal
 	try {
-		await store.saveSettings({
-			dailyCalorieGoal: cal,
-			dailyProteinGoal: cal ? Math.round(form.dailyProteinPct / 100 * cal / KCAL_PER_G.protein) : 0,
-			dailyCarbsGoal: cal ? Math.round(form.dailyCarbsPct / 100 * cal / KCAL_PER_G.carbs) : 0,
-			dailyFatGoal: cal ? Math.round(form.dailyFatPct / 100 * cal / KCAL_PER_G.fat) : 0,
-		})
+		const payload = { dailyCalorieGoal: cal }
+		if (cal) {
+			payload.dailyProteinGoal = Math.round(form.dailyProteinPct / 100 * cal / KCAL_PER_G.protein)
+			payload.dailyCarbsGoal = Math.round(form.dailyCarbsPct / 100 * cal / KCAL_PER_G.carbs)
+			payload.dailyFatGoal = Math.round(form.dailyFatPct / 100 * cal / KCAL_PER_G.fat)
+		}
+		await store.saveSettings(payload)
 		saved.value = true
 		setTimeout(() => {
 			saved.value = false
