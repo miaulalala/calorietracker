@@ -10,7 +10,7 @@ const url = (path) => generateUrl('/apps/calorietracker' + path)
 
 export default {
 	search(query) {
-		return axios.get(url('/off/search'), {
+		return axios.get(url('/usda/search'), {
 			params: { query },
 		}).then(r => r.data)
 	},
