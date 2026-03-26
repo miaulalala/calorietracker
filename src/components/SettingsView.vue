@@ -258,8 +258,21 @@ watch(open, async (isOpen) => {
 		})
 		try {
 			const profile = await TdeeProfileApi.get()
-			if (profile) {
-				Object.assign(tdee, profile)
+			if (profile && typeof profile === 'object') {
+				const sanitized = {}
+				if (SEX_OPTIONS.find(o => o.id === profile.sex)) {
+					sanitized.sex = profile.sex
+				}
+				if (ACTIVITY_OPTIONS.find(o => o.id === profile.activity)) {
+					sanitized.activity = profile.activity
+				}
+				if (GOAL_OPTIONS.find(o => o.id === profile.goal)) {
+					sanitized.goal = profile.goal
+				}
+				if (typeof profile.age === 'number') sanitized.age = profile.age
+				if (typeof profile.height === 'number') sanitized.height = profile.height
+				if (typeof profile.weight === 'number') sanitized.weight = profile.weight
+				Object.assign(tdee, sanitized)
 			}
 		} catch (error) {
 			console.error('Failed to load TDEE profile:', error)
