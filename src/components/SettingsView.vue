@@ -35,18 +35,21 @@
 				<NcInputField v-model.number="form.dailyProteinPct"
 					type="number"
 					min="0"
+					max="100"
 					:disabled="!form.dailyCalorieGoal"
 					:label="t('calorietracker', 'Protein (%)')"
 					:placeholder="t('calorietracker', 'e.g. 30')" />
 				<NcInputField v-model.number="form.dailyCarbsPct"
 					type="number"
 					min="0"
+					max="100"
 					:disabled="!form.dailyCalorieGoal"
 					:label="t('calorietracker', 'Carbs (%)')"
 					:placeholder="t('calorietracker', 'e.g. 45')" />
 				<NcInputField v-model.number="form.dailyFatPct"
 					type="number"
 					min="0"
+					max="100"
 					:disabled="!form.dailyCalorieGoal"
 					:label="t('calorietracker', 'Fat (%)')"
 					:placeholder="t('calorietracker', 'e.g. 25')" />
@@ -308,7 +311,7 @@ async function applyTDEE() {
 async function save() {
 	saving.value = true
 	saved.value = false
-	const cal = form.dailyCalorieGoal
+	const cal = Number(form.dailyCalorieGoal) || 0
 	try {
 		const payload = { dailyCalorieGoal: cal }
 		if (cal) {
