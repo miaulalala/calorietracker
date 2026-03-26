@@ -52,23 +52,38 @@ class TdeeProfileController extends Controller {
 	#[NoAdminRequired]
 	public function save(
 		string $sex,
-		int $age,
-		int $height,
-		int $weight,
+		int|float|string $age,
+		int|float|string $height,
+		int|float|string $weight,
 		string $activity,
 		string $goal,
 	): JSONResponse {
+		if (!is_numeric((string) $age) || !is_numeric((string) $height) || !is_numeric((string) $weight)) {
+			return new JSONResponse(['error' => 'Invalid input'], Http::STATUS_BAD_REQUEST);
+		}
+
+		$ageVal    = (int) $age;
+		$heightVal = (float) $height;
+		$weightVal = (float) $weight;
+
 		if (!in_array($sex, self::VALID_SEX, true)
 			|| !in_array($activity, self::VALID_ACTIVITY, true)
 			|| !in_array($goal, self::VALID_GOAL, true)
-			|| $age < 10 || $age > 120
-			|| $height < 50 || $height > 300
-			|| $weight < 20 || $weight > 500
+			|| $ageVal < 10 || $ageVal > 120
+			|| $heightVal < 50.0 || $heightVal > 300.0
+			|| $weightVal < 20.0 || $weightVal > 500.0
 		) {
 			return new JSONResponse(['error' => 'Invalid input'], Http::STATUS_BAD_REQUEST);
 		}
 
-		$profile = compact('sex', 'age', 'height', 'weight', 'activity', 'goal');
+		$profile = [
+			'sex'      => $sex,
+			'age'      => $ageVal,
+			'height'   => $heightVal,
+			'weight'   => $weightVal,
+			'activity' => $activity,
+			'goal'     => $goal,
+		];
 		try {
 			$json      = json_encode($profile, JSON_THROW_ON_ERROR);
 			$encrypted = $this->crypto->encrypt($json, $this->userId);
