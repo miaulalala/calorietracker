@@ -52,9 +52,9 @@ class TdeeProfileController extends Controller {
 	#[NoAdminRequired]
 	public function save(
 		string $sex,
-		int|float|string $age,
-		int|float|string $height,
-		int|float|string $weight,
+		string $age,
+		string $height,
+		string $weight,
 		string $activity,
 		string $goal,
 	): JSONResponse {
