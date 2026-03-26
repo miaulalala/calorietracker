@@ -63,7 +63,7 @@ class OpenFoodFactsController extends Controller {
 					'action'       => 'process',
 					'json'         => '1',
 					'page_size'    => '20',
-					'fields'       => 'product_name,product_name_en,nutriments',
+					'fields'       => 'code,product_name,product_name_en,nutriments',
 				],
 				'headers' => ['User-Agent' => self::USER_AGENT],
 				'timeout' => 15,
@@ -96,7 +96,7 @@ class OpenFoodFactsController extends Controller {
 
 				$results[] = [
 					'source'          => 'off',
-					'externalId'      => null,
+					'externalId'      => isset($product['code']) && $product['code'] !== '' ? (string) $product['code'] : null,
 					'name'            => $name,
 					'caloriesPer100g' => (int) round((float) $kcal),
 					'proteinPer100g'  => isset($n['proteins_100g'])

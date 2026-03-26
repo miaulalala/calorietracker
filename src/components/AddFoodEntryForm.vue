@@ -279,15 +279,17 @@ async function runSearch() {
 			usdaApi.search(searchQuery.value),
 			offApi.search(searchQuery.value),
 		])
-		const usda = usdaRes.status === 'fulfilled' ? usdaRes.value : []
-		const off = offRes.status === 'fulfilled' ? offRes.value : []
-		searchResults.value = [...usda, ...off]
+		if (usdaRes.status === 'rejected') {
+			console.error('USDA search failed:', usdaRes.reason)
+		}
+		if (offRes.status === 'rejected') {
+			console.error('OFF search failed:', offRes.reason)
+		}
+		searchResults.value = [
+			...(usdaRes.status === 'fulfilled' ? usdaRes.value : []),
+			...(offRes.status === 'fulfilled' ? offRes.value : []),
+		]
 		searchError.value = usdaRes.status === 'rejected' && offRes.status === 'rejected'
-		searchDone.value = true
-	} catch (error) {
-		console.error(error)
-		searchResults.value = []
-		searchError.value = true
 		searchDone.value = true
 	} finally {
 		searchLoading.value = false
@@ -537,13 +539,13 @@ async function submit() {
 }
 
 .food-entry-form__search-result-source--usda_fdc {
-	background: #e3f2fd;
-	color: #1565c0;
+	background: color-mix(in srgb, var(--color-primary-element) 15%, transparent);
+	color: var(--color-primary-element-text, var(--color-primary-text));
 }
 
 .food-entry-form__search-result-source--off {
-	background: #e8f5e9;
-	color: #2e7d32;
+	background: color-mix(in srgb, var(--color-success) 15%, transparent);
+	color: var(--color-success-text, var(--color-text-maxcontrast));
 }
 
 .food-entry-form__search-feedback {
