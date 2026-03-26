@@ -16,6 +16,7 @@ use OCP\AppFramework\Http\JSONResponse;
 use OCP\Http\Client\IClientService;
 use OCP\ICache;
 use OCP\ICacheFactory;
+use OCP\IConfig;
 use OCP\IRequest;
 use Psr\Log\LoggerInterface;
 
@@ -29,11 +30,11 @@ class UsdaFdcController extends Controller {
 	private const FDC_SEARCH_URL = 'https://api.nal.usda.gov/fdc/v1/foods/search';
 
 	/**
-	 * Public demo key provided by api.data.gov — limited to ~30 req/hour per IP.
-	 * Maintainers can replace this with their own free key from
-	 * https://fdc.nal.usda.gov/api-key-signup if higher limits are needed.
+	 * Fallback public demo key — limited to ~30 req/hour per server IP.
+	 * Admins can set a free key from https://fdc.nal.usda.gov/api-key-signup
+	 * via: occ config:app:set calorietracker usda_api_key --value=<KEY>
 	 */
-	private const FDC_API_KEY = 'DEMO_KEY';
+	private const FDC_API_KEY_DEFAULT = 'DEMO_KEY';
 
 	private const USER_AGENT = 'NextcloudCalorieTracker/1.0 (https://nextcloud.com)';
 	private const TTL_SEARCH  = 7 * 24 * 3600; // 7 d — nutritional data is very stable
@@ -57,6 +58,7 @@ class UsdaFdcController extends Controller {
 	public function __construct(
 		IRequest $request,
 		private IClientService $clientService,
+		private IConfig $config,
 		private LoggerInterface $logger,
 		ICacheFactory $cacheFactory,
 	) {
@@ -80,9 +82,10 @@ class UsdaFdcController extends Controller {
 
 		try {
 			$client = $this->clientService->newClient();
+			$apiKey = $this->config->getAppValue('calorietracker', 'usda_api_key', self::FDC_API_KEY_DEFAULT);
 			$response = $client->get(self::FDC_SEARCH_URL, [
 				'query' => [
-					'api_key'  => self::FDC_API_KEY,
+					'api_key'  => $apiKey,
 					'query'    => $query,
 					'dataType' => 'Foundation,SR Legacy,Survey (FNDDS),Branded',
 					'pageSize' => 20,
@@ -99,6 +102,9 @@ class UsdaFdcController extends Controller {
 
 			$results = [];
 			foreach ($foods as $food) {
+				if (!is_array($food)) {
+					continue;
+				}
 				$name = trim($food['description'] ?? '');
 				if ($name === '') {
 					continue;
@@ -106,7 +112,12 @@ class UsdaFdcController extends Controller {
 
 				// Index nutrients by nutrientId for fast lookup
 				$nutrients = [];
-				foreach ($food['foodNutrients'] ?? [] as $n) {
+				$foodNutrients = isset($food['foodNutrients']) && is_array($food['foodNutrients'])
+					? $food['foodNutrients'] : [];
+				foreach ($foodNutrients as $n) {
+					if (!is_array($n)) {
+						continue;
+					}
 					$id = $n['nutrientId'] ?? null;
 					if ($id !== null) {
 						$nutrients[(int) $id] = $n['value'] ?? null;

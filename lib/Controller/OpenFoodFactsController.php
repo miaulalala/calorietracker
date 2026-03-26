@@ -73,17 +73,22 @@ class OpenFoodFactsController extends Controller {
 			if (!is_array($data)) {
 				throw new \RuntimeException('Open Food Facts returned a non-JSON response');
 			}
-			$products = $data['products'] ?? [];
+			$products = isset($data['products']) && is_array($data['products'])
+				? $data['products'] : [];
 
 			$results = [];
 			foreach ($products as $product) {
+				if (!is_array($product)) {
+					continue;
+				}
 				// Prefer the English name; fall back to the localised product_name
 				$name = trim($product['product_name_en'] ?? $product['product_name'] ?? '');
 				if ($name === '') {
 					continue;
 				}
 
-				$n    = $product['nutriments'] ?? [];
+				$n    = isset($product['nutriments']) && is_array($product['nutriments'])
+					? $product['nutriments'] : [];
 				$kcal = $n['energy-kcal_100g'] ?? null;
 				if ($kcal === null) {
 					continue;
