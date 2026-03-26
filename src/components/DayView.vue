@@ -7,16 +7,16 @@
 	<div class="day-view">
 		<!-- Date navigation -->
 		<div class="day-view__header">
-			<NcButton type="tertiary" :ariaLabel="t('calorietracker', 'Previous day')" @click="changeDay(-1)">
+			<NcButton variant="tertiary" :ariaLabel="t('calorietracker', 'Previous day')" @click="changeDay(-1)">
 				<template #icon>‹</template>
 			</NcButton>
 			<h2 class="day-view__date">
 				{{ formattedDate }}
 			</h2>
-			<NcButton type="tertiary" :ariaLabel="t('calorietracker', 'Next day')" @click="changeDay(1)">
+			<NcButton variant="tertiary" :ariaLabel="t('calorietracker', 'Next day')" @click="changeDay(1)">
 				<template #icon>›</template>
 			</NcButton>
-			<NcButton v-if="!isToday" type="tertiary" @click="goToToday">
+			<NcButton v-if="!isToday" variant="tertiary" @click="goToToday">
 				{{ t('calorietracker', 'Today') }}
 			</NcButton>
 		</div>
@@ -210,9 +210,9 @@ onMounted(() => {
 	flex: 1;
 }
 
-.day-view__macro-bar--protein :deep(.progress-bar) { background: #4caf50; }
-.day-view__macro-bar--carbs   :deep(.progress-bar) { background: #ff9800; }
-.day-view__macro-bar--fat     :deep(.progress-bar) { background: #f44336; }
+.day-view__macro-bar--protein :deep(.progress-bar),
+.day-view__macro-bar--carbs   :deep(.progress-bar),
+.day-view__macro-bar--fat     :deep(.progress-bar) { background: var(--color-primary-element-light); }
 
 .day-view__macro-value {
 	font-size: 0.85em;

@@ -60,7 +60,7 @@
 				</p>
 			</div>
 			<div class="food-entry-form__search-manual">
-				<NcButton native-type="button" type="tertiary" @click="showManual = true">
+				<NcButton native-type="button" variant="tertiary" @click="showManual = true">
 					{{ t('calorietracker', 'Add food manually') }}
 				</NcButton>
 			</div>
@@ -137,12 +137,12 @@
 		</template>
 
 		<div class="food-entry-form__actions">
-			<NcButton native-type="button" type="tertiary" @click="store.closeAddModal()">
+			<NcButton native-type="button" variant="tertiary" @click="store.closeAddModal()">
 				{{ t('calorietracker', 'Cancel') }}
 			</NcButton>
 			<NcButton v-if="showManual || editingEntry"
 				native-type="submit"
-				type="primary"
+				variant="primary"
 				:disabled="loading">
 				{{ editingEntry ? t('calorietracker', 'Save') : t('calorietracker', 'Add') }}
 			</NcButton>

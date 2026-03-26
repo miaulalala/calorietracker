@@ -29,28 +29,40 @@
 				{{ t('calorietracker', 'Macros') }}
 			</h3>
 			<p class="settings-section__hint">
-				{{ t('calorietracker', 'Set to 0 to disable a goal.') }}
+				{{ t('calorietracker', 'Set to 0 to disable a goal. Percentages are based on your calorie goal.') }}
 			</p>
 			<div class="settings-section__row settings-section__row--three">
-				<NcInputField v-model.number="form.dailyProteinGoal"
+				<NcInputField v-model.number="form.dailyProteinPct"
 					type="number"
 					min="0"
-					:label="t('calorietracker', 'Protein goal (g)')"
-					:placeholder="t('calorietracker', 'e.g. 150')" />
-				<NcInputField v-model.number="form.dailyCarbsGoal"
+					max="100"
+					:disabled="!form.dailyCalorieGoal"
+					:label="t('calorietracker', 'Protein (%)')"
+					:placeholder="t('calorietracker', 'e.g. 30')" />
+				<NcInputField v-model.number="form.dailyCarbsPct"
 					type="number"
 					min="0"
-					:label="t('calorietracker', 'Carbs goal (g)')"
-					:placeholder="t('calorietracker', 'e.g. 250')" />
-				<NcInputField v-model.number="form.dailyFatGoal"
+					max="100"
+					:disabled="!form.dailyCalorieGoal"
+					:label="t('calorietracker', 'Carbs (%)')"
+					:placeholder="t('calorietracker', 'e.g. 45')" />
+				<NcInputField v-model.number="form.dailyFatPct"
 					type="number"
 					min="0"
-					:label="t('calorietracker', 'Fat goal (g)')"
-					:placeholder="t('calorietracker', 'e.g. 70')" />
+					max="100"
+					:disabled="!form.dailyCalorieGoal"
+					:label="t('calorietracker', 'Fat (%)')"
+					:placeholder="t('calorietracker', 'e.g. 25')" />
 			</div>
+			<p v-if="macroPctToGrams" class="settings-section__hint">
+				{{ t('calorietracker', '≈ {protein}g protein · {carbs}g carbs · {fat}g fat', { protein: macroPctToGrams.protein, carbs: macroPctToGrams.carbs, fat: macroPctToGrams.fat }) }}
+			</p>
+			<p v-else class="settings-section__hint">
+				{{ t('calorietracker', 'Set a calorie goal above to enable macro targets.') }}
+			</p>
 
 			<div class="settings-section__actions">
-				<NcButton type="primary" :disabled="saving" @click="save">
+				<NcButton variant="primary" :disabled="saving" @click="save">
 					{{ t('calorietracker', 'Save') }}
 				</NcButton>
 			</div>
@@ -59,7 +71,7 @@
 		<!-- ── Calculate section ─────────────────────────────────────── -->
 		<NcAppSettingsSection id="calculate" :name="t('calorietracker', 'Calculate calorie goal')">
 			<p class="settings-section__hint settings-section__hint--top">
-				{{ t('calorietracker', 'Estimate your Total Daily Energy Expenditure (TDEE) using the Mifflin St-Jeor equation, then apply it as your calorie goal.') }}
+				{{ t('calorietracker', 'Estimate your Total Daily Energy Expenditure (TDEE) using the Mifflin St-Jeor equation, then apply it as your calorie goal. Your inputs are encrypted at rest and not stored in plaintext.') }}
 			</p>
 
 			<h3 class="settings-section__subtitle">
@@ -141,7 +153,7 @@
 				<NcButton @click="calculateTDEE">
 					{{ t('calorietracker', 'Calculate') }}
 				</NcButton>
-				<NcButton v-if="tdeeResult !== null" type="primary" @click="applyTDEE">
+				<NcButton v-if="tdeeResult !== null" variant="primary" @click="applyTDEE">
 					{{ t('calorietracker', 'Apply as calorie goal') }}
 				</NcButton>
 			</div>
@@ -160,6 +172,7 @@ import NcCheckboxRadioSwitch from '@nextcloud/vue/components/NcCheckboxRadioSwit
 import NcInputField from '@nextcloud/vue/components/NcInputField'
 import NcNoteCard from '@nextcloud/vue/components/NcNoteCard'
 import { useSettingsStore } from '../stores/settings.js'
+import TdeeProfileApi from '../services/TdeeProfileApi.js'
 
 const SEX_OPTIONS = [
 	{ id: 'male', label: 'Male', offset: 5 },
@@ -180,6 +193,9 @@ const GOAL_OPTIONS = [
 	{ id: 'gain', label: 'Gain weight (+500 kcal/day)', adjustment: 500 },
 ]
 
+// kcal per gram for each macro
+const KCAL_PER_G = { protein: 4, carbs: 4, fat: 9 }
+
 const store = useSettingsStore()
 const { open, dailyCalorieGoal, dailyProteinGoal, dailyCarbsGoal, dailyFatGoal } = storeToRefs(store)
 
@@ -190,9 +206,9 @@ const tdeeResult = ref(null)
 
 const form = reactive({
 	dailyCalorieGoal: 0,
-	dailyProteinGoal: 0,
-	dailyCarbsGoal: 0,
-	dailyFatGoal: 0,
+	dailyProteinPct: 0,
+	dailyCarbsPct: 0,
+	dailyFatPct: 0,
 })
 
 const tdee = reactive({
@@ -207,15 +223,47 @@ const tdee = reactive({
 const selectedActivity = computed(() => ACTIVITY_OPTIONS.find(o => o.id === tdee.activity))
 const selectedGoal = computed(() => GOAL_OPTIONS.find(o => o.id === tdee.goal))
 
+// Live gram preview shown below the percentage inputs
+const macroPctToGrams = computed(() => {
+	if (!form.dailyCalorieGoal) return null
+	const cal = form.dailyCalorieGoal
+	return {
+		protein: Math.round(form.dailyProteinPct / 100 * cal / KCAL_PER_G.protein),
+		carbs: Math.round(form.dailyCarbsPct / 100 * cal / KCAL_PER_G.carbs),
+		fat: Math.round(form.dailyFatPct / 100 * cal / KCAL_PER_G.fat),
+	}
+})
+
+/**
+ * Convert stored gram values to percentages for display.
+ *
+ * @param {number} grams
+ * @param {number} kcalPerGram
+ * @param {number} calorieGoal
+ */
+function gramsToPercent(grams, kcalPerGram, calorieGoal) {
+	if (!calorieGoal) return 0
+	return Math.min(Math.round(grams * kcalPerGram / calorieGoal * 100), 100)
+}
+
 watch(open, async (isOpen) => {
 	if (isOpen) {
 		await store.fetchSettings()
+		const cal = dailyCalorieGoal.value
 		Object.assign(form, {
-			dailyCalorieGoal: dailyCalorieGoal.value,
-			dailyProteinGoal: dailyProteinGoal.value,
-			dailyCarbsGoal: dailyCarbsGoal.value,
-			dailyFatGoal: dailyFatGoal.value,
+			dailyCalorieGoal: cal,
+			dailyProteinPct: gramsToPercent(dailyProteinGoal.value, KCAL_PER_G.protein, cal),
+			dailyCarbsPct: gramsToPercent(dailyCarbsGoal.value, KCAL_PER_G.carbs, cal),
+			dailyFatPct: gramsToPercent(dailyFatGoal.value, KCAL_PER_G.fat, cal),
 		})
+		try {
+			const profile = await TdeeProfileApi.get()
+			if (profile) {
+				Object.assign(tdee, profile)
+			}
+		} catch (error) {
+			console.error('Failed to load TDEE profile:', error)
+		}
 	}
 })
 
@@ -245,8 +293,16 @@ function calculateTDEE() {
 /**
  *
  */
-function applyTDEE() {
+async function applyTDEE() {
 	form.dailyCalorieGoal = tdeeResult.value
+	form.dailyProteinPct = 30
+	form.dailyCarbsPct = 40
+	form.dailyFatPct = 30
+	try {
+		await TdeeProfileApi.save({ ...tdee })
+	} catch (error) {
+		console.error('Failed to save TDEE profile:', error)
+	}
 }
 
 /**
@@ -255,8 +311,14 @@ function applyTDEE() {
 async function save() {
 	saving.value = true
 	saved.value = false
+	const cal = form.dailyCalorieGoal
 	try {
-		await store.saveSettings({ ...form })
+		await store.saveSettings({
+			dailyCalorieGoal: cal,
+			dailyProteinGoal: cal ? Math.round(form.dailyProteinPct / 100 * cal / KCAL_PER_G.protein) : 0,
+			dailyCarbsGoal: cal ? Math.round(form.dailyCarbsPct / 100 * cal / KCAL_PER_G.carbs) : 0,
+			dailyFatGoal: cal ? Math.round(form.dailyFatPct / 100 * cal / KCAL_PER_G.fat) : 0,
+		})
 		saved.value = true
 		setTimeout(() => {
 			saved.value = false
