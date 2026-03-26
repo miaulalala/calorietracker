@@ -315,6 +315,10 @@ async function save() {
 			payload.dailyProteinGoal = Math.round(form.dailyProteinPct / 100 * cal / KCAL_PER_G.protein)
 			payload.dailyCarbsGoal = Math.round(form.dailyCarbsPct / 100 * cal / KCAL_PER_G.carbs)
 			payload.dailyFatGoal = Math.round(form.dailyFatPct / 100 * cal / KCAL_PER_G.fat)
+		} else {
+			payload.dailyProteinGoal = 0
+			payload.dailyCarbsGoal = 0
+			payload.dailyFatGoal = 0
 		}
 		await store.saveSettings(payload)
 		saved.value = true
