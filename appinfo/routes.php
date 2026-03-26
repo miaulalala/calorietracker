@@ -1,7 +1,7 @@
 <?php
 
 /**
- * SPDX-FileCopyrightText: 2026 Nextcloud contributors
+ * SPDX-FileCopyrightText: 2026 Anna Larch
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -9,8 +9,9 @@ return [
 	'routes' => [
 		['name' => 'page#index', 'url' => '/', 'verb' => 'GET'],
 
-		// open food facts proxy
+		// food database search proxies
 		['name' => 'open_food_facts#search', 'url' => '/off/search', 'verb' => 'GET'],
+		['name' => 'usda_fdc#search', 'url' => '/usda/search', 'verb' => 'GET'],
 
 		// food entries
 		['name' => 'food_entry#index', 'url' => '/entries', 'verb' => 'GET'],

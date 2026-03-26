@@ -8,7 +8,7 @@ import { generateUrl } from '@nextcloud/router'
 
 export default {
 	search(query) {
-		return axios.get(generateUrl('/apps/calorietracker/off/search'), {
+		return axios.get(generateUrl('/apps/calorietracker/usda/search'), {
 			params: { query },
 		}).then(r => r.data)
 	},
