@@ -217,7 +217,7 @@ const form = reactive(defaultForm())
 watch(editingEntry, (entry) => {
 	Object.assign(form, entry ? entryToForm(entry) : defaultForm())
 	showManual.value = false
-})
+}, { immediate: true })
 
 const calculatedCalories = computed(() => Math.round(form.caloriesPer100g * form.amountGrams / 100))
 
