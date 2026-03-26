@@ -94,11 +94,11 @@ class UsdaFdcController extends Controller {
 				'timeout' => 15,
 			]);
 
-			$data  = json_decode($response->getBody(), true);
-			$foods = [];
-			if (is_array($data) && isset($data['foods']) && is_array($data['foods'])) {
-				$foods = $data['foods'];
+			$data = json_decode($response->getBody(), true);
+			if (json_last_error() !== JSON_ERROR_NONE || !is_array($data)) {
+				throw new \RuntimeException('Invalid JSON response from USDA FDC API');
 			}
+			$foods = isset($data['foods']) && is_array($data['foods']) ? $data['foods'] : [];
 
 			$results = [];
 			foreach ($foods as $food) {
