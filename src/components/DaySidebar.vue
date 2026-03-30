@@ -34,7 +34,8 @@
 				:key="week.key"
 				:name="week.label"
 				:allow-collapse="true"
-				:open="week.open">
+				:open="week.open"
+				:to="{ path: '/week/' + week.key }">
 				<template #icon>
 					<svg xmlns="http://www.w3.org/2000/svg"
 						class="day-sidebar__week-icon"
