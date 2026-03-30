@@ -177,6 +177,52 @@ describe('foodEntries store', () => {
 			expect(store.daySummaries['2026-03-25'].totalKcal).toBe(2000)
 		})
 
+		test('fetchSummaries clears stale keys within the fetched range', async () => {
+			// Pre-populate a summary that the API no longer returns (day became empty)
+			store.daySummaries = { '2026-03-24': { totalKcal: 1800, itemCount: 3 } }
+			api.getSummaries.mockResolvedValue([])
+			await store.fetchSummaries('2026-03-24', '2026-03-24')
+			expect(store.daySummaries['2026-03-24']).toBeUndefined()
+		})
+
+		test('fetchSummaries preserves keys outside the fetched range', async () => {
+			store.daySummaries = {
+				'2026-03-20': { totalKcal: 1500, itemCount: 2 },
+				'2026-03-24': { totalKcal: 1800, itemCount: 3 },
+			}
+			api.getSummaries.mockResolvedValue([{ date: '2026-03-24', totalKcal: 2000, itemCount: 4 }])
+			await store.fetchSummaries('2026-03-24', '2026-03-24')
+			// Key outside range must survive
+			expect(store.daySummaries['2026-03-20'].totalKcal).toBe(1500)
+			// Key inside range is replaced with fresh data
+			expect(store.daySummaries['2026-03-24'].totalKcal).toBe(2000)
+		})
+
+		test('fetchSummaries prunes keys older than 90 days', async () => {
+			// Use a fixed "today" so the cutoff is deterministic
+			const today = new Date()
+			const oldDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 91)
+			const oldKey = oldDate.toISOString().slice(0, 10)
+			store.daySummaries = { [oldKey]: { totalKcal: 999, itemCount: 1 } }
+			api.getSummaries.mockResolvedValue([])
+			await store.fetchSummaries()
+			expect(store.daySummaries[oldKey]).toBeUndefined()
+		})
+
+		test('fetchSummaries keeps keys within the 90-day retention window', async () => {
+			const today = new Date()
+			// A date 30 days ago is well within the 90-day window
+			const recentDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 30)
+			const recentKey = recentDate.toISOString().slice(0, 10)
+			// A future date is used as the fetch range so recentKey is not cleared
+			const futureDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1)
+			const futureKey = futureDate.toISOString().slice(0, 10)
+			store.daySummaries = { [recentKey]: { totalKcal: 1200, itemCount: 2 } }
+			api.getSummaries.mockResolvedValue([])
+			await store.fetchSummaries(futureKey, futureKey)
+			expect(store.daySummaries[recentKey].totalKcal).toBe(1200)
+		})
+
 		test('openAddModal sets editingEntry and addModalOpen', () => {
 			store.openAddModal({ id: 5 })
 			expect(store.addModalOpen).toBe(true)

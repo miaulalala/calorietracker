@@ -5,6 +5,7 @@
 
 import { createRouter, createWebHashHistory } from 'vue-router'
 import DayView from './components/DayView.vue'
+import WeekView from './components/WeekView.vue'
 
 export default createRouter({
 	history: createWebHashHistory(),
@@ -12,6 +13,10 @@ export default createRouter({
 		{
 			path: '/',
 			component: DayView,
+		},
+		{
+			path: '/week/:weekStart',
+			component: WeekView,
 		},
 	],
 })
