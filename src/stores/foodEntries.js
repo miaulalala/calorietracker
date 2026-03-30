@@ -87,16 +87,17 @@ export const useFoodEntriesStore = defineStore('foodEntries', {
 			await this.fetchEntries()
 		},
 
-		async fetchSummaries() {
+		async fetchSummaries(from = null, to = null) {
 			const now = new Date()
-			const to = toLocalDateString(now)
-			const from = toLocalDateString(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 29))
-			const summaries = await api.getSummaries(from, to)
-			const map = {}
+			const resolvedTo = to ?? toLocalDateString(now)
+			const resolvedFrom = from ?? toLocalDateString(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 29))
+			const summaries = await api.getSummaries(resolvedFrom, resolvedTo)
+			const incoming = {}
 			for (const s of summaries) {
-				map[s.date] = s
+				incoming[s.date] = s
 			}
-			this.daySummaries = map
+			// Merge so that callers fetching specific ranges don't wipe the sidebar's 30-day data
+			this.daySummaries = { ...this.daySummaries, ...incoming }
 		},
 
 		openAddModal(entry = null) {

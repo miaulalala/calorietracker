@@ -42,11 +42,11 @@
 							'week-view__day-row--future': day.isFuture,
 							'week-view__day-row--empty': !day.summary,
 						}"
-						role="button"
-						tabindex="0"
-						@click="goToDay(day.date)"
-						@keydown.enter.prevent="goToDay(day.date)"
-						@keydown.space.prevent="goToDay(day.date)">
+						:role="day.isFuture ? undefined : 'button'"
+						:tabindex="day.isFuture ? undefined : 0"
+						@click="day.isFuture || goToDay(day.date)"
+						@keydown.enter.prevent="day.isFuture || goToDay(day.date)"
+						@keydown.space.prevent="day.isFuture || goToDay(day.date)">
 						<td class="week-view__col-day">
 							<span class="week-view__day-name">{{ day.label }}</span>
 							<span class="week-view__day-date">{{ day.shortDate }}</span>
@@ -124,22 +124,43 @@ const router = useRouter()
 const foodEntriesStore = useFoodEntriesStore()
 const { daySummaries } = storeToRefs(foodEntriesStore)
 
-const weekStart = computed(() => route.params.weekStart)
+// Fix 2: validate the route param before using it — a malformed URL like
+// /week/2026-99-99 would otherwise crash toLocaleDateString with "Invalid time value".
+const parsedMonday = computed(() => {
+	const raw = route.params.weekStart
+	if (typeof raw !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+		return null
+	}
+	const [year, month, day] = raw.split('-').map(Number)
+	const d = new Date(year, month - 1, day)
+	// Confirm the date didn't roll over (e.g. month 13 → next year)
+	if (d.getFullYear() !== year || d.getMonth() !== month - 1 || d.getDate() !== day) {
+		return null
+	}
+	return d
+})
 
 const weekHeading = computed(() => {
-	const [year, month, day] = weekStart.value.split('-').map(Number)
-	const monday = new Date(year, month - 1, day)
-	const sunday = new Date(year, month - 1, day + 6)
+	const monday = parsedMonday.value
+	if (!monday) {
+		return t('calorietracker', 'Invalid week')
+	}
+	const sunday = new Date(monday)
+	sunday.setDate(sunday.getDate() + 6)
 	return monday.toLocaleDateString(undefined, { month: 'long', day: 'numeric' })
 		+ ' – '
 		+ sunday.toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })
 })
 
 const days = computed(() => {
-	const [year, month, day] = weekStart.value.split('-').map(Number)
+	const monday = parsedMonday.value
+	if (!monday) {
+		return []
+	}
 	const todayStr = toLocalDateString()
 	return Array.from({ length: 7 }, (_, i) => {
-		const d = new Date(year, month - 1, day + i)
+		const d = new Date(monday)
+		d.setDate(monday.getDate() + i)
 		const date = toLocalDateString(d)
 		const isToday = date === todayStr
 		const isFuture = date > todayStr
@@ -180,13 +201,22 @@ const averages = computed(() => {
 	}
 })
 
+// Fix 4: only set currentDate — DayView's onMounted will fetch entries itself,
+// so calling setDate() here would cause a duplicate request.
 function goToDay(date) {
-	foodEntriesStore.setDate(date)
+	foodEntriesStore.currentDate = date
 	router.push('/')
 }
 
 onMounted(() => {
-	foodEntriesStore.fetchSummaries()
+	// Fix 3: fetch summaries for the specific week so data is available even
+	// when this week falls outside the sidebar's default 30-day window.
+	const weekDays = days.value
+	if (weekDays.length > 0) {
+		foodEntriesStore.fetchSummaries(weekDays[0].date, weekDays[weekDays.length - 1].date)
+	} else {
+		foodEntriesStore.fetchSummaries()
+	}
 })
 </script>
 
