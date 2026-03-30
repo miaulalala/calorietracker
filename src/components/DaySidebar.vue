@@ -157,12 +157,15 @@ const weeks = computed(() => {
  * @param date
  */
 function selectDay(date) {
-	foodEntriesStore.setDate(date)
-	// Navigate back to the day view when the user is on a different route
-	// (e.g. the weekly overview), otherwise the sidebar update has no effect.
-	if (route.path !== '/') {
-		router.push('/')
+	// When already on the day view, use setDate which also fetches entries.
+	if (route.path === '/') {
+		foodEntriesStore.setDate(date)
+		return
 	}
+	// When navigating from a different view (e.g. the weekly overview), only
+	// update the date here and let DayView fetch entries once on mount.
+	foodEntriesStore.currentDate = date
+	router.push('/')
 }
 
 foodEntriesStore.fetchSummaries()
