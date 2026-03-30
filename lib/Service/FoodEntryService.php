@@ -49,7 +49,7 @@ class FoodEntryService {
 		?string $source = null,
 		?string $externalId = null,
 	): FoodEntry {
-		$foodName = substr(trim($foodName), 0, self::MAX_FOOD_NAME_LENGTH);
+		$foodName = mb_substr(trim($foodName), 0, self::MAX_FOOD_NAME_LENGTH, 'UTF-8');
 		$this->validateMealType($mealType);
 		$this->validateDate($eatenAt);
 		$this->validatePositive('caloriesPer100g', $caloriesPer100g, self::MAX_CALORIES_PER_100G);
@@ -107,7 +107,7 @@ class FoodEntryService {
 		?int $carbsPer100g = null,
 		?int $fatPer100g = null,
 	): FoodEntry {
-		$foodName = substr(trim($foodName), 0, self::MAX_FOOD_NAME_LENGTH);
+		$foodName = mb_substr(trim($foodName), 0, self::MAX_FOOD_NAME_LENGTH, 'UTF-8');
 		$this->validateMealType($mealType);
 		$this->validateDate($eatenAt);
 		$this->validatePositive('caloriesPer100g', $caloriesPer100g, self::MAX_CALORIES_PER_100G);

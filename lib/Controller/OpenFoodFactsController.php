@@ -99,10 +99,11 @@ class OpenFoodFactsController extends Controller {
 
 			$results = [];
 			foreach ($foods as $food) {
-				$name = substr(trim($food['description'] ?? ''), 0, self::MAX_FOOD_NAME_LENGTH);
-				if ($name === '') {
+				$description = trim($food['description'] ?? '');
+				if ($description === '') {
 					continue;
 				}
+				$name = mb_substr($description, 0, self::MAX_FOOD_NAME_LENGTH, 'UTF-8');
 
 				// Index nutrients by nutrientId for fast lookup
 				$nutrients = [];
