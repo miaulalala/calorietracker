@@ -10,7 +10,8 @@ return [
 		['name' => 'page#index', 'url' => '/', 'verb' => 'GET'],
 
 		// open food facts proxy
-		['name' => 'open_food_facts#search', 'url' => '/off/search', 'verb' => 'GET'],
+		['name' => 'open_food_facts#search',  'url' => '/off/search',           'verb' => 'GET'],
+		['name' => 'open_food_facts#barcode', 'url' => '/off/barcode/{barcode}', 'verb' => 'GET'],
 
 		// food entries
 		['name' => 'food_entry#index', 'url' => '/entries', 'verb' => 'GET'],

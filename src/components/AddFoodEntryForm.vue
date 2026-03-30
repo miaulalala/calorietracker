@@ -9,8 +9,28 @@
 			{{ editingEntry ? t('calorietracker', 'Edit entry') : t('calorietracker', 'Add food') }}
 		</h2>
 
-		<!-- Search — hidden in edit mode -->
-		<div v-if="!editingEntry && !showManual" class="food-entry-form__search">
+		<!-- Tabs — add mode only, before a result is selected -->
+		<div v-if="!editingEntry && !showManual" class="food-entry-form__tabs" role="tablist">
+			<button role="tab"
+				class="food-entry-form__tab"
+				:class="{ 'food-entry-form__tab--active': activeTab === 'search' }"
+				:aria-selected="activeTab === 'search'"
+				type="button"
+				@click="activeTab = 'search'">
+				{{ t('calorietracker', 'Search') }}
+			</button>
+			<button role="tab"
+				class="food-entry-form__tab"
+				:class="{ 'food-entry-form__tab--active': activeTab === 'barcode' }"
+				:aria-selected="activeTab === 'barcode'"
+				type="button"
+				@click="activeTab = 'barcode'">
+				{{ t('calorietracker', 'Barcode') }}
+			</button>
+		</div>
+
+		<!-- Search tab — hidden in edit mode -->
+		<div v-if="!editingEntry && !showManual && activeTab === 'search'" class="food-entry-form__search">
 			<div class="food-entry-form__search-input-row">
 				<input v-model="searchQuery"
 					class="food-entry-form__search-input"
@@ -60,6 +80,21 @@
 					{{ t('calorietracker', 'Add food manually') }}
 				</NcButton>
 			</div>
+		</div>
+
+		<!-- Barcode tab -->
+		<div v-if="!editingEntry && !showManual && activeTab === 'barcode'" class="food-entry-form__barcode">
+			<BarcodeScanner @result="onBarcodeResult" />
+			<div v-if="barcodeLoading" class="food-entry-form__barcode-status">
+				<span class="food-entry-form__search-spinner" aria-hidden="true" />
+				{{ t('calorietracker', 'Looking up product…') }}
+			</div>
+			<p v-else-if="barcodeNotFound" class="food-entry-form__barcode-feedback food-entry-form__barcode-feedback--warn">
+				{{ t('calorietracker', 'No product found for this barcode.') }}
+			</p>
+			<p v-else-if="barcodeError" class="food-entry-form__barcode-feedback food-entry-form__barcode-feedback--error">
+				{{ t('calorietracker', 'Could not reach the product database.') }}
+			</p>
 		</div>
 
 		<!-- Manual fields — shown after selecting a result, clicking "Add manually", or in edit mode -->
@@ -154,6 +189,7 @@ import NcButton from '@nextcloud/vue/components/NcButton'
 import NcInputField from '@nextcloud/vue/components/NcInputField'
 import NcSelect from '@nextcloud/vue/components/NcSelect'
 import NcDateTimePickerNative from '@nextcloud/vue/components/NcDateTimePickerNative'
+import BarcodeScanner from './BarcodeScanner.vue'
 import { useFoodEntriesStore } from '../stores/foodEntries.js'
 import { toLocalDateString } from '../utils/date.js'
 import offApi from '../services/OpenFoodFactsApi.js'
@@ -169,6 +205,14 @@ const loading = ref(false)
 const showManual = ref(false)
 const selectedSource = ref(null)
 const selectedExternalId = ref(null)
+
+// Tab state (add mode only)
+const activeTab = ref('search')
+
+// Barcode lookup state
+const barcodeLoading = ref(false)
+const barcodeError = ref(false)
+const barcodeNotFound = ref(false)
 
 // Search state
 const searchQuery = ref('')
@@ -297,6 +341,32 @@ function selectResult(result) {
 	nextTick(() => {
 		amountField.value?.$el?.querySelector('input')?.focus()
 	})
+}
+
+/**
+ *
+ * @param barcode
+ */
+async function onBarcodeResult(barcode) {
+	barcodeLoading.value = true
+	barcodeError.value = false
+	barcodeNotFound.value = false
+	try {
+		const result = await offApi.lookupBarcode(barcode)
+		if (result) {
+			selectResult(result)
+		} else {
+			barcodeNotFound.value = true
+		}
+	} catch (e) {
+		if (e.response?.status === 404) {
+			barcodeNotFound.value = true
+		} else {
+			barcodeError.value = true
+		}
+	} finally {
+		barcodeLoading.value = false
+	}
 }
 
 /**
@@ -539,5 +609,60 @@ async function submit() {
 	gap: 8px;
 	justify-content: flex-end;
 	margin-top: 16px;
+}
+
+.food-entry-form__tabs {
+	display: flex;
+	border-bottom: 1px solid var(--color-border);
+	margin-bottom: 16px;
+}
+
+.food-entry-form__tab {
+	flex: 1;
+	padding: 8px 0;
+	background: none;
+	border: none;
+	border-bottom: 2px solid transparent;
+	margin-bottom: -1px;
+	cursor: pointer;
+	font-size: 0.95em;
+	color: var(--color-text-maxcontrast);
+	transition: color 0.15s, border-color 0.15s;
+}
+
+.food-entry-form__tab:hover {
+	color: var(--color-main-text);
+}
+
+.food-entry-form__tab--active {
+	color: var(--color-primary-element);
+	border-bottom-color: var(--color-primary-element);
+	font-weight: 600;
+}
+
+.food-entry-form__barcode {
+	margin-bottom: 16px;
+}
+
+.food-entry-form__barcode-status {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	font-size: 0.9em;
+	color: var(--color-text-maxcontrast);
+	margin-top: 12px;
+}
+
+.food-entry-form__barcode-feedback {
+	font-size: 0.9em;
+	margin: 12px 0 0;
+}
+
+.food-entry-form__barcode-feedback--warn {
+	color: var(--color-warning);
+}
+
+.food-entry-form__barcode-feedback--error {
+	color: var(--color-error);
 }
 </style>

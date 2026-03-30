@@ -13,6 +13,7 @@
     "test:coverage": "LANG=C vitest run --coverage"
   },
   "dependencies": {
+    "@zxing/browser": "^0.1.4",
     "@nextcloud/axios": "^2.5.1",
     "@nextcloud/initial-state": "^2.2.0",
     "@nextcloud/l10n": "^3.4.0",
