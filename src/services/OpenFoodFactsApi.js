@@ -12,4 +12,9 @@ export default {
 			params: { query },
 		}).then(r => r.data)
 	},
+
+	lookupBarcode(barcode) {
+		return axios.get(generateUrl('/apps/calorietracker/off/barcode/' + encodeURIComponent(barcode)))
+			.then(r => r.data)
+	},
 }

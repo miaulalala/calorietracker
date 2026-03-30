@@ -12,6 +12,7 @@ namespace OCA\CalorieTracker\Controller;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
+use OCP\AppFramework\Http\Attribute\UserRateLimit;
 use OCP\AppFramework\Http\JSONResponse;
 use OCP\Http\Client\IClientService;
 use OCP\ICache;
@@ -34,8 +35,12 @@ class OpenFoodFactsController extends Controller {
 	 */
 	private const FDC_API_KEY = 'DEMO_KEY';
 
+	private const OFF_BARCODE_URL = 'https://world.openfoodfacts.org/api/v2/product/';
+
 	private const USER_AGENT = 'NextcloudCalorieTracker/1.0 (https://nextcloud.com)';
 	private const TTL_SEARCH  = 7 * 24 * 3600; // 7 d — nutritional data is very stable
+
+	private const MAX_FOOD_NAME_LENGTH = 255;
 
 	// USDA FDC nutrient IDs
 	private const NUTRIENT_KCAL    = 1008;
@@ -151,6 +156,83 @@ class OpenFoodFactsController extends Controller {
 				'app'       => 'calorietracker',
 			]);
 			return new JSONResponse(['error' => 'Search failed'], Http::STATUS_BAD_GATEWAY);
+		}
+	}
+
+	/**
+	 * Look up a single product by barcode (EAN-8, EAN-13, UPC-A, UPC-E) via
+	 * the Open Food Facts API. Returns the same shape as a search result item.
+	 */
+	#[NoAdminRequired]
+	#[UserRateLimit(limit: 30, period: 60)]
+	public function barcode(string $barcode): JSONResponse {
+		$barcode = trim($barcode);
+		if (!preg_match('/^\d{8,14}$/', $barcode)) {
+			return new JSONResponse(['error' => 'Invalid barcode. Expected 8–14 digits.'], Http::STATUS_BAD_REQUEST);
+		}
+
+		$cacheKey = 'offbarcode:' . $barcode;
+		$cached = $this->cache->get($cacheKey);
+		if ($cached !== null) {
+			// null is cached as a sentinel for "not found", return 404
+			if ($cached === false) {
+				return new JSONResponse(null, Http::STATUS_NOT_FOUND);
+			}
+			return new JSONResponse($cached);
+		}
+
+		try {
+			$client = $this->clientService->newClient();
+			$response = $client->get(self::OFF_BARCODE_URL . urlencode($barcode) . '.json', [
+				'query'   => ['fields' => 'product_name,product_name_en,nutriments'],
+				'headers' => ['User-Agent' => self::USER_AGENT],
+				'timeout' => 10,
+			]);
+
+			$data = json_decode($response->getBody(), true);
+
+			if (($data['status'] ?? 0) !== 1) {
+				// Cache negative result to avoid hammering the API for unknown barcodes
+				$this->cache->set($cacheKey, false, self::TTL_SEARCH);
+				return new JSONResponse(null, Http::STATUS_NOT_FOUND);
+			}
+
+			$product    = $data['product'];
+			$nutriments = $product['nutriments'] ?? [];
+			$kcal       = $nutriments['energy-kcal_100g'] ?? null;
+
+			// Prefer the English name, fall back to the default product name
+			$rawName = $product['product_name_en'] ?? $product['product_name'] ?? '';
+			$name    = mb_substr(trim($rawName), 0, self::MAX_FOOD_NAME_LENGTH, 'UTF-8');
+
+			if ($name === '' || $kcal === null) {
+				$this->cache->set($cacheKey, false, self::TTL_SEARCH);
+				return new JSONResponse(null, Http::STATUS_NOT_FOUND);
+			}
+
+			$result = [
+				'source'          => 'openfoodfacts',
+				'externalId'      => $barcode,
+				'name'            => $name,
+				'caloriesPer100g' => (int) round((float) $kcal),
+				'proteinPer100g'  => isset($nutriments['proteins_100g'])
+					? (int) round((float) $nutriments['proteins_100g']) : null,
+				'carbsPer100g'    => isset($nutriments['carbohydrates_100g'])
+					? (int) round((float) $nutriments['carbohydrates_100g']) : null,
+				'fatPer100g'      => isset($nutriments['fat_100g'])
+					? (int) round((float) $nutriments['fat_100g']) : null,
+			];
+
+			$this->cache->set($cacheKey, $result, self::TTL_SEARCH);
+			return new JSONResponse($result);
+		} catch (\Exception $e) {
+			$this->logger->error('OpenFoodFacts barcode lookup failed for "{barcode}": {message}', [
+				'barcode'   => $barcode,
+				'message'   => $e->getMessage(),
+				'exception' => $e,
+				'app'       => 'calorietracker',
+			]);
+			return new JSONResponse(['error' => 'Lookup failed'], Http::STATUS_BAD_GATEWAY);
 		}
 	}
 }
