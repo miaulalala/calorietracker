@@ -112,7 +112,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted } from 'vue'
+import { computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { translate as t, translatePlural as n } from '@nextcloud/l10n'
@@ -124,8 +124,8 @@ const router = useRouter()
 const foodEntriesStore = useFoodEntriesStore()
 const { daySummaries } = storeToRefs(foodEntriesStore)
 
-// Fix 2: validate the route param before using it — a malformed URL like
-// /week/2026-99-99 would otherwise crash toLocaleDateString with "Invalid time value".
+// Validate the weekStart route param before use — a malformed URL like
+// /week/2026-99-99 would otherwise cause toLocaleDateString to throw "Invalid time value".
 const parsedMonday = computed(() => {
 	const raw = route.params.weekStart
 	if (typeof raw !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
@@ -201,23 +201,28 @@ const averages = computed(() => {
 	}
 })
 
-// Fix 4: only set currentDate — DayView's onMounted will fetch entries itself,
-// so calling setDate() here would cause a duplicate request.
+// Set currentDate without calling setDate() — DayView fetches entries on its
+// own mount, so calling setDate() here would trigger a duplicate request.
 function goToDay(date) {
 	foodEntriesStore.currentDate = date
 	router.push('/')
 }
 
-onMounted(() => {
-	// Fix 3: fetch summaries for the specific week so data is available even
-	// when this week falls outside the sidebar's default 30-day window.
+function fetchWeekSummaries() {
 	const weekDays = days.value
 	if (weekDays.length > 0) {
+		// Fetch the specific week range so data is available even when
+		// this week falls outside the sidebar's default 30-day window.
 		foodEntriesStore.fetchSummaries(weekDays[0].date, weekDays[weekDays.length - 1].date)
 	} else {
 		foodEntriesStore.fetchSummaries()
 	}
-})
+}
+
+// Vue Router reuses the same component instance when navigating between
+// weeks, so onMounted won't re-run. Watching the param covers both the
+// initial load and subsequent week-to-week navigation.
+watch(() => route.params.weekStart, fetchWeekSummaries, { immediate: true })
 </script>
 
 <style scoped>

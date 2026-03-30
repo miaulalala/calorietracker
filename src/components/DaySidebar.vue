@@ -93,6 +93,7 @@
 
 <script setup>
 import { computed } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { translate as t, translatePlural as n } from '@nextcloud/l10n'
 import NcAppNavigation from '@nextcloud/vue/components/NcAppNavigation'
@@ -102,6 +103,8 @@ import { useFoodEntriesStore } from '../stores/foodEntries.js'
 import { useSettingsStore } from '../stores/settings.js'
 import { toLocalDateString } from '../utils/date.js'
 
+const route = useRoute()
+const router = useRouter()
 const foodEntriesStore = useFoodEntriesStore()
 const settingsStore = useSettingsStore()
 const { currentDate, daySummaries } = storeToRefs(foodEntriesStore)
@@ -155,6 +158,11 @@ const weeks = computed(() => {
  */
 function selectDay(date) {
 	foodEntriesStore.setDate(date)
+	// Navigate back to the day view when the user is on a different route
+	// (e.g. the weekly overview), otherwise the sidebar update has no effect.
+	if (route.path !== '/') {
+		router.push('/')
+	}
 }
 
 foodEntriesStore.fetchSummaries()

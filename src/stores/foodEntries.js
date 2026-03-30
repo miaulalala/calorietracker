@@ -96,8 +96,26 @@ export const useFoodEntriesStore = defineStore('foodEntries', {
 			for (const s of summaries) {
 				incoming[s.date] = s
 			}
-			// Merge so that callers fetching specific ranges don't wipe the sidebar's 30-day data
-			this.daySummaries = { ...this.daySummaries, ...incoming }
+
+			// Drop existing keys within the fetched range before merging so that
+			// days that became empty (omitted by the API) don't leave stale data.
+			const updated = { ...this.daySummaries }
+			for (const date of Object.keys(updated)) {
+				if (date >= resolvedFrom && date <= resolvedTo) {
+					delete updated[date]
+				}
+			}
+
+			// Prune dates older than 90 days to prevent unbounded growth in
+			// long-lived sessions where a user browses many past weeks.
+			const cutoff = toLocalDateString(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 89))
+			for (const date of Object.keys(updated)) {
+				if (date < cutoff) {
+					delete updated[date]
+				}
+			}
+
+			this.daySummaries = { ...updated, ...incoming }
 		},
 
 		openAddModal(entry = null) {
