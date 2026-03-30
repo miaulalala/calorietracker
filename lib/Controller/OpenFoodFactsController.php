@@ -12,6 +12,7 @@ namespace OCA\CalorieTracker\Controller;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
+use OCP\AppFramework\Http\Attribute\UserRateLimit;
 use OCP\AppFramework\Http\JSONResponse;
 use OCP\Http\Client\IClientService;
 use OCP\ICache;
@@ -35,7 +36,9 @@ class OpenFoodFactsController extends Controller {
 	private const FDC_API_KEY = 'DEMO_KEY';
 
 	private const USER_AGENT = 'NextcloudCalorieTracker/1.0 (https://nextcloud.com)';
-	private const TTL_SEARCH  = 7 * 24 * 3600; // 7 d — nutritional data is very stable
+	private const TTL_SEARCH = 7 * 24 * 3600; // 7 d — nutritional data is very stable
+
+	private const MAX_FOOD_NAME_LENGTH = 255;
 
 	// USDA FDC nutrient IDs
 	private const NUTRIENT_KCAL    = 1008;
@@ -64,6 +67,7 @@ class OpenFoodFactsController extends Controller {
 	}
 
 	#[NoAdminRequired]
+	#[UserRateLimit(limit: 20, period: 60)]
 	public function search(string $query): JSONResponse {
 		$query = trim($query);
 		if (strlen($query) < 2) {
@@ -95,10 +99,11 @@ class OpenFoodFactsController extends Controller {
 
 			$results = [];
 			foreach ($foods as $food) {
-				$name = trim($food['description'] ?? '');
-				if ($name === '') {
+				$description = trim($food['description'] ?? '');
+				if ($description === '') {
 					continue;
 				}
+				$name = mb_substr($description, 0, self::MAX_FOOD_NAME_LENGTH, 'UTF-8');
 
 				// Index nutrients by nutrientId for fast lookup
 				$nutrients = [];
