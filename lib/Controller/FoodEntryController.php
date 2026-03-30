@@ -16,12 +16,14 @@ use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
 use OCP\AppFramework\Http\JSONResponse;
 use OCP\IRequest;
+use Psr\Log\LoggerInterface;
 
 class FoodEntryController extends Controller {
 	public function __construct(
 		IRequest $request,
 		private FoodEntryService $service,
 		private string $userId,
+		private LoggerInterface $logger,
 	) {
 		parent::__construct('calorietracker', $request);
 	}
@@ -95,6 +97,7 @@ class FoodEntryController extends Controller {
 			);
 			return new JSONResponse($entry);
 		} catch (DoesNotExistException) {
+			$this->logger->info('Food entry {id} not found for user during update', ['id' => $id, 'app' => 'calorietracker']);
 			return new JSONResponse(['error' => 'Not found'], Http::STATUS_NOT_FOUND);
 		} catch (\InvalidArgumentException $e) {
 			return new JSONResponse(['error' => $e->getMessage()], Http::STATUS_BAD_REQUEST);
@@ -107,6 +110,7 @@ class FoodEntryController extends Controller {
 			$entry = $this->service->delete($id, $this->userId);
 			return new JSONResponse($entry);
 		} catch (DoesNotExistException) {
+			$this->logger->info('Food entry {id} not found for user during delete', ['id' => $id, 'app' => 'calorietracker']);
 			return new JSONResponse(['error' => 'Not found'], Http::STATUS_NOT_FOUND);
 		}
 	}

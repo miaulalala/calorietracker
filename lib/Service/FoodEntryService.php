@@ -17,6 +17,11 @@ use OCP\AppFramework\Db\DoesNotExistException;
 class FoodEntryService {
 	public const MEAL_TYPES = ['breakfast', 'lunch', 'dinner', 'snack'];
 
+	private const MAX_FOOD_NAME_LENGTH  = 255;
+	private const MAX_CALORIES_PER_100G = 9000;  // well above pure fat (~900 kcal/100 g)
+	private const MAX_AMOUNT_GRAMS      = 10000; // 10 kg ceiling
+	private const MAX_MACRO_PER_100G    = 100;   // no single macro can exceed 100 g/100 g
+
 	public function __construct(
 		private FoodEntryMapper $mapper,
 		private FoodItemMapper $foodItemMapper,
@@ -44,10 +49,20 @@ class FoodEntryService {
 		?string $source = null,
 		?string $externalId = null,
 	): FoodEntry {
+		$foodName = substr(trim($foodName), 0, self::MAX_FOOD_NAME_LENGTH);
 		$this->validateMealType($mealType);
 		$this->validateDate($eatenAt);
-		$this->validatePositive('caloriesPer100g', $caloriesPer100g);
-		$this->validatePositive('amountGrams', $amountGrams);
+		$this->validatePositive('caloriesPer100g', $caloriesPer100g, self::MAX_CALORIES_PER_100G);
+		$this->validatePositive('amountGrams', $amountGrams, self::MAX_AMOUNT_GRAMS);
+		if ($proteinPer100g !== null) {
+			$this->validateMacro('proteinPer100g', $proteinPer100g);
+		}
+		if ($carbsPer100g !== null) {
+			$this->validateMacro('carbsPer100g', $carbsPer100g);
+		}
+		if ($fatPer100g !== null) {
+			$this->validateMacro('fatPer100g', $fatPer100g);
+		}
 
 		// Persist the food reference so it survives cache expiry
 		$foodItemId = null;
@@ -56,7 +71,7 @@ class FoodEntryService {
 				$userId,
 				$source,
 				$externalId,
-				trim($foodName),
+				$foodName,
 				$caloriesPer100g,
 				$proteinPer100g,
 				$carbsPer100g,
@@ -67,7 +82,7 @@ class FoodEntryService {
 
 		$entry = new FoodEntry();
 		$entry->setUserId($userId);
-		$entry->setFoodName(trim($foodName));
+		$entry->setFoodName($foodName);
 		$entry->setCaloriesPer100g($caloriesPer100g);
 		$entry->setAmountGrams($amountGrams);
 		$entry->setMealType($mealType);
@@ -92,13 +107,23 @@ class FoodEntryService {
 		?int $carbsPer100g = null,
 		?int $fatPer100g = null,
 	): FoodEntry {
+		$foodName = substr(trim($foodName), 0, self::MAX_FOOD_NAME_LENGTH);
 		$this->validateMealType($mealType);
 		$this->validateDate($eatenAt);
-		$this->validatePositive('caloriesPer100g', $caloriesPer100g);
-		$this->validatePositive('amountGrams', $amountGrams);
+		$this->validatePositive('caloriesPer100g', $caloriesPer100g, self::MAX_CALORIES_PER_100G);
+		$this->validatePositive('amountGrams', $amountGrams, self::MAX_AMOUNT_GRAMS);
+		if ($proteinPer100g !== null) {
+			$this->validateMacro('proteinPer100g', $proteinPer100g);
+		}
+		if ($carbsPer100g !== null) {
+			$this->validateMacro('carbsPer100g', $carbsPer100g);
+		}
+		if ($fatPer100g !== null) {
+			$this->validateMacro('fatPer100g', $fatPer100g);
+		}
 
 		$entry = $this->mapper->findForUser($id, $userId);
-		$entry->setFoodName(trim($foodName));
+		$entry->setFoodName($foodName);
 		$entry->setCaloriesPer100g($caloriesPer100g);
 		$entry->setAmountGrams($amountGrams);
 		$entry->setMealType($mealType);
@@ -168,11 +193,27 @@ class FoodEntryService {
 		if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) !== 1) {
 			throw new \InvalidArgumentException('Invalid date format. Expected YYYY-MM-DD.');
 		}
+		[$year, $month, $day] = explode('-', $date);
+		if (!checkdate((int)$month, (int)$day, (int)$year)) {
+			throw new \InvalidArgumentException('Invalid date. Expected a valid calendar date.');
+		}
 	}
 
-	private function validatePositive(string $field, int $value): void {
+	private function validatePositive(string $field, int $value, int $max): void {
 		if ($value <= 0) {
 			throw new \InvalidArgumentException("$field must be greater than 0.");
+		}
+		if ($value > $max) {
+			throw new \InvalidArgumentException("$field must not exceed $max.");
+		}
+	}
+
+	private function validateMacro(string $field, int $value): void {
+		if ($value < 0) {
+			throw new \InvalidArgumentException("$field must not be negative.");
+		}
+		if ($value > self::MAX_MACRO_PER_100G) {
+			throw new \InvalidArgumentException("$field must not exceed " . self::MAX_MACRO_PER_100G . ' g per 100 g.');
 		}
 	}
 }
