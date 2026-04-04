@@ -37,20 +37,28 @@ class SettingsController extends Controller {
 	#[NoAdminRequired]
 	public function save(
 		int $dailyCalorieGoal = 0,
-		int $dailyProteinGoal = 0,
-		int $dailyCarbsGoal = 0,
-		int $dailyFatGoal = 0,
+		?int $dailyProteinGoal = null,
+		?int $dailyCarbsGoal = null,
+		?int $dailyFatGoal = null,
 	): JSONResponse {
 		$this->config->setUserValue($this->userId, 'calorietracker', 'dailyCalorieGoal', (string) max(0, $dailyCalorieGoal));
-		$this->config->setUserValue($this->userId, 'calorietracker', 'dailyProteinGoal', (string) max(0, $dailyProteinGoal));
-		$this->config->setUserValue($this->userId, 'calorietracker', 'dailyCarbsGoal', (string) max(0, $dailyCarbsGoal));
-		$this->config->setUserValue($this->userId, 'calorietracker', 'dailyFatGoal', (string) max(0, $dailyFatGoal));
+
+		// Only update macro goals when explicitly provided; otherwise preserve the stored values.
+		if ($dailyProteinGoal !== null) {
+			$this->config->setUserValue($this->userId, 'calorietracker', 'dailyProteinGoal', (string) max(0, $dailyProteinGoal));
+		}
+		if ($dailyCarbsGoal !== null) {
+			$this->config->setUserValue($this->userId, 'calorietracker', 'dailyCarbsGoal', (string) max(0, $dailyCarbsGoal));
+		}
+		if ($dailyFatGoal !== null) {
+			$this->config->setUserValue($this->userId, 'calorietracker', 'dailyFatGoal', (string) max(0, $dailyFatGoal));
+		}
 
 		return new JSONResponse([
 			'dailyCalorieGoal' => max(0, $dailyCalorieGoal),
-			'dailyProteinGoal' => max(0, $dailyProteinGoal),
-			'dailyCarbsGoal'   => max(0, $dailyCarbsGoal),
-			'dailyFatGoal'     => max(0, $dailyFatGoal),
+			'dailyProteinGoal' => (int) $this->config->getUserValue($this->userId, 'calorietracker', 'dailyProteinGoal', '0'),
+			'dailyCarbsGoal'   => (int) $this->config->getUserValue($this->userId, 'calorietracker', 'dailyCarbsGoal', '0'),
+			'dailyFatGoal'     => (int) $this->config->getUserValue($this->userId, 'calorietracker', 'dailyFatGoal', '0'),
 		]);
 	}
 }
