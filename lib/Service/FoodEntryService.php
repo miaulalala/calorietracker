@@ -28,6 +28,10 @@ class FoodEntryService {
 	) {
 	}
 
+	public function find(int $id, string $userId): FoodEntry {
+		return $this->mapper->findForUser($id, $userId);
+	}
+
 	/**
 	 * @return FoodEntry[]
 	 */
@@ -174,6 +178,103 @@ class FoodEntryService {
 		}
 
 		return array_values($byDate);
+	}
+
+	/**
+	 * Partial update — only supplied (non-null) fields are changed.
+	 */
+	public function patch(
+		int $id,
+		string $userId,
+		?string $foodName = null,
+		?int $caloriesPer100g = null,
+		?int $amountGrams = null,
+		?string $mealType = null,
+		?string $eatenAt = null,
+		?int $proteinPer100g = null,
+		?int $carbsPer100g = null,
+		?int $fatPer100g = null,
+	): FoodEntry {
+		$entry = $this->mapper->findForUser($id, $userId);
+
+		if ($foodName !== null) {
+			$entry->setFoodName(mb_substr(trim($foodName), 0, self::MAX_FOOD_NAME_LENGTH, 'UTF-8'));
+		}
+		if ($caloriesPer100g !== null) {
+			$this->validatePositive('caloriesPer100g', $caloriesPer100g, self::MAX_CALORIES_PER_100G);
+			$entry->setCaloriesPer100g($caloriesPer100g);
+		}
+		if ($amountGrams !== null) {
+			$this->validatePositive('amountGrams', $amountGrams, self::MAX_AMOUNT_GRAMS);
+			$entry->setAmountGrams($amountGrams);
+		}
+		if ($mealType !== null) {
+			$this->validateMealType($mealType);
+			$entry->setMealType($mealType);
+		}
+		if ($eatenAt !== null) {
+			$this->validateDate($eatenAt);
+			$entry->setEatenAt($eatenAt);
+		}
+		if ($proteinPer100g !== null) {
+			$this->validateMacro('proteinPer100g', $proteinPer100g);
+			$entry->setProteinPer100g($proteinPer100g);
+		}
+		if ($carbsPer100g !== null) {
+			$this->validateMacro('carbsPer100g', $carbsPer100g);
+			$entry->setCarbsPer100g($carbsPer100g);
+		}
+		if ($fatPer100g !== null) {
+			$this->validateMacro('fatPer100g', $fatPer100g);
+			$entry->setFatPer100g($fatPer100g);
+		}
+
+		return $this->mapper->update($entry);
+	}
+
+	private const MAX_BATCH_COPY = 50;
+
+	/**
+	 * Copy all entries from one date to another.
+	 *
+	 * @return FoodEntry[] the newly created entries
+	 */
+	public function batchCopy(string $userId, string $fromDate, string $toDate, ?string $mealType = null): array {
+		$this->validateDate($fromDate);
+		$this->validateDate($toDate);
+		if ($mealType !== null) {
+			$this->validateMealType($mealType);
+		}
+
+		$sourceEntries = $this->mapper->findAllForUserOnDate($userId, $fromDate);
+		if ($mealType !== null) {
+			$sourceEntries = array_filter($sourceEntries, fn (FoodEntry $e) => $e->getMealType() === $mealType);
+		}
+
+		if (count($sourceEntries) === 0) {
+			throw new \InvalidArgumentException('No entries found on the source date.');
+		}
+		if (count($sourceEntries) > self::MAX_BATCH_COPY) {
+			throw new \InvalidArgumentException('Too many entries to copy (max ' . self::MAX_BATCH_COPY . ').');
+		}
+
+		$created = [];
+		foreach ($sourceEntries as $src) {
+			$entry = new FoodEntry();
+			$entry->setUserId($userId);
+			$entry->setFoodName($src->getFoodName());
+			$entry->setCaloriesPer100g($src->getCaloriesPer100g());
+			$entry->setAmountGrams($src->getAmountGrams());
+			$entry->setMealType($src->getMealType());
+			$entry->setEatenAt($toDate);
+			$entry->setProteinPer100g($src->getProteinPer100g());
+			$entry->setCarbsPer100g($src->getCarbsPer100g());
+			$entry->setFatPer100g($src->getFatPer100g());
+			$entry->setFoodItemId($src->getFoodItemId());
+			$created[] = $this->mapper->insert($entry);
+		}
+
+		return $created;
 	}
 
 	public function delete(int $id, string $userId): FoodEntry {

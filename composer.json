@@ -3,19 +3,46 @@
 	"description": "Track your daily calorie intake",
 	"license": "AGPL-3.0-or-later",
 	"config": {
+		"allow-plugins": {
+			"bamarni/composer-bin-plugin": true
+		},
 		"optimize-autoloader": true,
-		"classmap-authoritative": true,
+		"classmap-authoritative": false,
 		"platform": {
 			"php": "8.1"
 		},
 		"sort-packages": true
+	},
+	"extra": {
+		"bamarni-bin": {
+			"bin-links": true,
+			"forward-command": true
+		}
 	},
 	"autoload": {
 		"psr-4": {
 			"OCA\\CalorieTracker\\": "lib/"
 		}
 	},
+	"autoload-dev": {
+		"psr-4": {
+			"OCA\\CalorieTracker\\Tests\\": "tests/"
+		}
+	},
+	"require": {
+		"bamarni/composer-bin-plugin": "^1.8"
+	},
+	"require-dev": {
+		"nextcloud/ocp": "dev-master"
+	},
 	"scripts": {
-		"lint": "find . -name \\*.php -not -path './vendor/*' -print0 | xargs -0 -n1 php -l"
+		"lint": "find . -name \\*.php -not -path './vendor/*' -not -path './vendor-bin/*' -print0 | xargs -0 -n1 php -l",
+		"post-install-cmd": [
+			"@composer bin all install --ansi"
+		],
+		"post-update-cmd": [
+			"@composer bin all install --ansi"
+		],
+		"test:unit": "vendor-bin/phpunit/vendor/phpunit/phpunit/phpunit -c tests/phpunit.xml"
 	}
 }

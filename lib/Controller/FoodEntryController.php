@@ -29,6 +29,15 @@ class FoodEntryController extends Controller {
 	}
 
 	#[NoAdminRequired]
+	public function show(int $id): JSONResponse {
+		try {
+			return new JSONResponse($this->service->find($id, $this->userId));
+		} catch (DoesNotExistException) {
+			return new JSONResponse(['error' => 'Not found'], Http::STATUS_NOT_FOUND);
+		}
+	}
+
+	#[NoAdminRequired]
 	public function index(string $date): JSONResponse {
 		try {
 			return new JSONResponse($this->service->findAllForDay($this->userId, $date));
@@ -105,6 +114,39 @@ class FoodEntryController extends Controller {
 	}
 
 	#[NoAdminRequired]
+	public function patch(
+		int $id,
+		?string $foodName = null,
+		?int $caloriesPer100g = null,
+		?int $amountGrams = null,
+		?string $mealType = null,
+		?string $eatenAt = null,
+		?int $proteinPer100g = null,
+		?int $carbsPer100g = null,
+		?int $fatPer100g = null,
+	): JSONResponse {
+		try {
+			$entry = $this->service->patch(
+				$id,
+				$this->userId,
+				$foodName,
+				$caloriesPer100g,
+				$amountGrams,
+				$mealType,
+				$eatenAt,
+				$proteinPer100g,
+				$carbsPer100g,
+				$fatPer100g,
+			);
+			return new JSONResponse($entry);
+		} catch (DoesNotExistException) {
+			return new JSONResponse(['error' => 'Not found'], Http::STATUS_NOT_FOUND);
+		} catch (\InvalidArgumentException $e) {
+			return new JSONResponse(['error' => $e->getMessage()], Http::STATUS_BAD_REQUEST);
+		}
+	}
+
+	#[NoAdminRequired]
 	public function delete(int $id): JSONResponse {
 		try {
 			$entry = $this->service->delete($id, $this->userId);
@@ -112,6 +154,16 @@ class FoodEntryController extends Controller {
 		} catch (DoesNotExistException) {
 			$this->logger->info('Food entry {id} not found for user during delete', ['id' => $id, 'app' => 'calorietracker']);
 			return new JSONResponse(['error' => 'Not found'], Http::STATUS_NOT_FOUND);
+		}
+	}
+
+	#[NoAdminRequired]
+	public function batch(string $fromDate, string $toDate, ?string $mealType = null): JSONResponse {
+		try {
+			$entries = $this->service->batchCopy($this->userId, $fromDate, $toDate, $mealType);
+			return new JSONResponse($entries, Http::STATUS_CREATED);
+		} catch (\InvalidArgumentException $e) {
+			return new JSONResponse(['error' => $e->getMessage()], Http::STATUS_BAD_REQUEST);
 		}
 	}
 

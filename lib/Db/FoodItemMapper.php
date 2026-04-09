@@ -20,6 +20,46 @@ class FoodItemMapper extends QBMapper {
 	}
 
 	/**
+	 * Return food items sorted by most recently used (latest entry eaten_at).
+	 *
+	 * @return FoodItem[]
+	 */
+	public function findRecentForUser(string $userId, int $limit = 25): array {
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('fi.*')
+			->selectAlias($qb->func()->max('fe.eaten_at'), 'last_used')
+			->from($this->getTableName(), 'fi')
+			->innerJoin('fi', 'caltracker_food_entries', 'fe',
+				$qb->expr()->eq('fi.id', 'fe.food_item_id'))
+			->where($qb->expr()->eq('fi.user_id', $qb->createNamedParameter($userId)))
+			->groupBy('fi.id')
+			->orderBy('last_used', 'DESC')
+			->setMaxResults($limit);
+
+		return $this->findEntities($qb);
+	}
+
+	/**
+	 * Return food items sorted by usage frequency (most entries first).
+	 *
+	 * @return FoodItem[]
+	 */
+	public function findFrequentForUser(string $userId, int $limit = 25): array {
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('fi.*')
+			->selectAlias($qb->func()->count('fe.id'), 'use_count')
+			->from($this->getTableName(), 'fi')
+			->innerJoin('fi', 'caltracker_food_entries', 'fe',
+				$qb->expr()->eq('fi.id', 'fe.food_item_id'))
+			->where($qb->expr()->eq('fi.user_id', $qb->createNamedParameter($userId)))
+			->groupBy('fi.id')
+			->orderBy('use_count', 'DESC')
+			->setMaxResults($limit);
+
+		return $this->findEntities($qb);
+	}
+
+	/**
 	 * Find an existing food item by source + external_id, or return null.
 	 */
 	public function findBySourceId(string $userId, string $source, string $externalId): ?FoodItem {
