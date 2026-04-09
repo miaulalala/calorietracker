@@ -36,10 +36,10 @@
 	"scripts": {
 		"lint": "find . -name \\*.php -not -path './vendor/*' -not -path './vendor-bin/*' -print0 | xargs -0 -n1 php -l",
 		"post-install-cmd": [
-			"@composer bin all install --ansi"
+			"@php -r \"if (file_exists('vendor/bamarni/composer-bin-plugin/src/Command/BinCommand.php')) { passthru('composer bin all install --ansi', \\$exitCode); exit(\\$exitCode); }\""
 		],
 		"post-update-cmd": [
-			"@composer bin all install --ansi"
+			"@php -r \"if (file_exists('vendor/bamarni/composer-bin-plugin/src/Command/BinCommand.php')) { passthru('composer bin all install --ansi', \\$exitCode); exit(\\$exitCode); }\""
 		],
 		"test:unit": "vendor-bin/phpunit/vendor/phpunit/phpunit/phpunit -c tests/phpunit.xml"
 	}

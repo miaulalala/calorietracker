@@ -67,7 +67,7 @@ class FoodEntryServiceTest extends TestCase {
 		$this->mapper->method('findForUser')->with(1, 'user1')->willReturn($entry);
 		$this->mapper->method('update')->willReturnArgument(0);
 
-		$result = $this->service->patch(1, 'user1', amountGrams: 200);
+		$result = $this->service->patch(1, 'user1', ['amountGrams' => 200]);
 
 		$this->assertEquals(200, $result->getAmountGrams());
 		// Unchanged fields stay the same
@@ -81,7 +81,7 @@ class FoodEntryServiceTest extends TestCase {
 		$this->mapper->method('findForUser')->willReturn($entry);
 
 		$this->expectException(\InvalidArgumentException::class);
-		$this->service->patch(1, 'user1', mealType: 'brunch');
+		$this->service->patch(1, 'user1', ['mealType' => 'brunch']);
 	}
 
 	public function testPatchValidatesDate(): void {
@@ -89,7 +89,7 @@ class FoodEntryServiceTest extends TestCase {
 		$this->mapper->method('findForUser')->willReturn($entry);
 
 		$this->expectException(\InvalidArgumentException::class);
-		$this->service->patch(1, 'user1', eatenAt: 'not-a-date');
+		$this->service->patch(1, 'user1', ['eatenAt' => 'not-a-date']);
 	}
 
 	public function testPatchValidatesCalories(): void {
@@ -97,7 +97,7 @@ class FoodEntryServiceTest extends TestCase {
 		$this->mapper->method('findForUser')->willReturn($entry);
 
 		$this->expectException(\InvalidArgumentException::class);
-		$this->service->patch(1, 'user1', caloriesPer100g: -5);
+		$this->service->patch(1, 'user1', ['caloriesPer100g' => -5]);
 	}
 
 	public function testPatchValidatesMacro(): void {
@@ -105,7 +105,7 @@ class FoodEntryServiceTest extends TestCase {
 		$this->mapper->method('findForUser')->willReturn($entry);
 
 		$this->expectException(\InvalidArgumentException::class);
-		$this->service->patch(1, 'user1', proteinPer100g: 150);
+		$this->service->patch(1, 'user1', ['proteinPer100g' => 150]);
 	}
 
 	public function testPatchTruncatesFoodName(): void {
@@ -114,7 +114,7 @@ class FoodEntryServiceTest extends TestCase {
 		$this->mapper->method('update')->willReturnArgument(0);
 
 		$longName = str_repeat('A', 300);
-		$result = $this->service->patch(1, 'user1', foodName: $longName);
+		$result = $this->service->patch(1, 'user1', ['foodName' => $longName]);
 		$this->assertEquals(255, mb_strlen($result->getFoodName()));
 	}
 
@@ -123,13 +123,12 @@ class FoodEntryServiceTest extends TestCase {
 		$this->mapper->method('findForUser')->willReturn($entry);
 		$this->mapper->method('update')->willReturnArgument(0);
 
-		$result = $this->service->patch(
-			1, 'user1',
-			foodName: 'Apple',
-			caloriesPer100g: 52,
-			mealType: 'snack',
-			eatenAt: '2026-04-02',
-		);
+		$result = $this->service->patch(1, 'user1', [
+			'foodName' => 'Apple',
+			'caloriesPer100g' => 52,
+			'mealType' => 'snack',
+			'eatenAt' => '2026-04-02',
+		]);
 
 		$this->assertEquals('Apple', $result->getFoodName());
 		$this->assertEquals(52, $result->getCaloriesPer100g());
@@ -142,8 +141,17 @@ class FoodEntryServiceTest extends TestCase {
 		$this->mapper->method('findForUser')->willReturn($entry);
 		$this->mapper->method('update')->willReturnArgument(0);
 
-		$result = $this->service->patch(1, 'user1');
+		$result = $this->service->patch(1, 'user1', []);
 		$this->assertEquals('Banana', $result->getFoodName());
+	}
+
+	public function testPatchClearsNullableMacro(): void {
+		$entry = $this->makeEntry();
+		$this->mapper->method('findForUser')->willReturn($entry);
+		$this->mapper->method('update')->willReturnArgument(0);
+
+		$result = $this->service->patch(1, 'user1', ['proteinPer100g' => null]);
+		$this->assertNull($result->getProteinPer100g());
 	}
 
 	// ── batchCopy() ────────────────────────────────────────────────────────────

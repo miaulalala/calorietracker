@@ -103,6 +103,9 @@ class OpenFoodFactsController extends Controller {
 			// Find the first food whose gtinUpc matches the queried barcode
 			$match = null;
 			foreach ($foods as $food) {
+				if (!is_array($food)) {
+					continue;
+				}
 				$gtin = $food['gtinUpc'] ?? '';
 				if ($gtin === $code || ltrim($gtin, '0') === ltrim($code, '0')) {
 					$match = $food;
@@ -117,6 +120,9 @@ class OpenFoodFactsController extends Controller {
 
 			$nutrients = [];
 			foreach ($match['foodNutrients'] ?? [] as $n) {
+				if (!is_array($n)) {
+					continue;
+				}
 				$id = $n['nutrientId'] ?? null;
 				if ($id !== null) {
 					$nutrients[(int)$id] = $n['value'] ?? null;

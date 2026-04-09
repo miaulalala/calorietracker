@@ -181,52 +181,53 @@ class FoodEntryService {
 	}
 
 	/**
-	 * Partial update — only supplied (non-null) fields are changed.
+	 * Partial update — only fields present in $fields are changed.
+	 *
+	 * Uses array_key_exists so that explicitly passing null for a nullable
+	 * field (e.g. proteinPer100g) clears it, while omitting the key leaves
+	 * the current value untouched.
+	 *
+	 * @param array<string, mixed> $fields
 	 */
-	public function patch(
-		int $id,
-		string $userId,
-		?string $foodName = null,
-		?int $caloriesPer100g = null,
-		?int $amountGrams = null,
-		?string $mealType = null,
-		?string $eatenAt = null,
-		?int $proteinPer100g = null,
-		?int $carbsPer100g = null,
-		?int $fatPer100g = null,
-	): FoodEntry {
+	public function patch(int $id, string $userId, array $fields): FoodEntry {
 		$entry = $this->mapper->findForUser($id, $userId);
 
-		if ($foodName !== null) {
-			$entry->setFoodName(mb_substr(trim($foodName), 0, self::MAX_FOOD_NAME_LENGTH, 'UTF-8'));
+		if (array_key_exists('foodName', $fields) && $fields['foodName'] !== null) {
+			$entry->setFoodName(mb_substr(trim($fields['foodName']), 0, self::MAX_FOOD_NAME_LENGTH, 'UTF-8'));
 		}
-		if ($caloriesPer100g !== null) {
-			$this->validatePositive('caloriesPer100g', $caloriesPer100g, self::MAX_CALORIES_PER_100G);
-			$entry->setCaloriesPer100g($caloriesPer100g);
+		if (array_key_exists('caloriesPer100g', $fields) && $fields['caloriesPer100g'] !== null) {
+			$this->validatePositive('caloriesPer100g', $fields['caloriesPer100g'], self::MAX_CALORIES_PER_100G);
+			$entry->setCaloriesPer100g($fields['caloriesPer100g']);
 		}
-		if ($amountGrams !== null) {
-			$this->validatePositive('amountGrams', $amountGrams, self::MAX_AMOUNT_GRAMS);
-			$entry->setAmountGrams($amountGrams);
+		if (array_key_exists('amountGrams', $fields) && $fields['amountGrams'] !== null) {
+			$this->validatePositive('amountGrams', $fields['amountGrams'], self::MAX_AMOUNT_GRAMS);
+			$entry->setAmountGrams($fields['amountGrams']);
 		}
-		if ($mealType !== null) {
-			$this->validateMealType($mealType);
-			$entry->setMealType($mealType);
+		if (array_key_exists('mealType', $fields) && $fields['mealType'] !== null) {
+			$this->validateMealType($fields['mealType']);
+			$entry->setMealType($fields['mealType']);
 		}
-		if ($eatenAt !== null) {
-			$this->validateDate($eatenAt);
-			$entry->setEatenAt($eatenAt);
+		if (array_key_exists('eatenAt', $fields) && $fields['eatenAt'] !== null) {
+			$this->validateDate($fields['eatenAt']);
+			$entry->setEatenAt($fields['eatenAt']);
 		}
-		if ($proteinPer100g !== null) {
-			$this->validateMacro('proteinPer100g', $proteinPer100g);
-			$entry->setProteinPer100g($proteinPer100g);
+		if (array_key_exists('proteinPer100g', $fields)) {
+			if ($fields['proteinPer100g'] !== null) {
+				$this->validateMacro('proteinPer100g', $fields['proteinPer100g']);
+			}
+			$entry->setProteinPer100g($fields['proteinPer100g']);
 		}
-		if ($carbsPer100g !== null) {
-			$this->validateMacro('carbsPer100g', $carbsPer100g);
-			$entry->setCarbsPer100g($carbsPer100g);
+		if (array_key_exists('carbsPer100g', $fields)) {
+			if ($fields['carbsPer100g'] !== null) {
+				$this->validateMacro('carbsPer100g', $fields['carbsPer100g']);
+			}
+			$entry->setCarbsPer100g($fields['carbsPer100g']);
 		}
-		if ($fatPer100g !== null) {
-			$this->validateMacro('fatPer100g', $fatPer100g);
-			$entry->setFatPer100g($fatPer100g);
+		if (array_key_exists('fatPer100g', $fields)) {
+			if ($fields['fatPer100g'] !== null) {
+				$this->validateMacro('fatPer100g', $fields['fatPer100g']);
+			}
+			$entry->setFatPer100g($fields['fatPer100g']);
 		}
 
 		return $this->mapper->update($entry);

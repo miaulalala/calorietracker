@@ -65,7 +65,7 @@ class FoodEntryControllerTest extends TestCase {
 		$entry = $this->makeEntry();
 		$this->service->method('patch')->willReturn($entry);
 
-		$response = $this->controller->patch(1, amountGrams: 200);
+		$response = $this->controller->patch(1);
 		$this->assertEquals(Http::STATUS_OK, $response->getStatus());
 		$this->assertSame($entry, $response->getData());
 	}
@@ -80,7 +80,7 @@ class FoodEntryControllerTest extends TestCase {
 	public function testPatchReturns400OnValidationError(): void {
 		$this->service->method('patch')->willThrowException(new \InvalidArgumentException('bad'));
 
-		$response = $this->controller->patch(1, mealType: 'brunch');
+		$response = $this->controller->patch(1);
 		$this->assertEquals(Http::STATUS_BAD_REQUEST, $response->getStatus());
 	}
 

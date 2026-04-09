@@ -34,6 +34,7 @@ class FoodItemMapper extends QBMapper {
 			->selectAlias($sub->func()->max('eaten_at'), 'last_used')
 			->from('caltracker_food_entries')
 			->where($sub->expr()->isNotNull('food_item_id'))
+			->andWhere($sub->expr()->eq('user_id', $sub->createNamedParameter($userId)))
 			->groupBy('food_item_id');
 
 		$qb = $this->db->getQueryBuilder();
@@ -67,6 +68,7 @@ class FoodItemMapper extends QBMapper {
 			->selectAlias($sub->func()->count('id'), 'use_count')
 			->from('caltracker_food_entries')
 			->where($sub->expr()->isNotNull('food_item_id'))
+			->andWhere($sub->expr()->eq('user_id', $sub->createNamedParameter($userId)))
 			->groupBy('food_item_id');
 
 		$qb = $this->db->getQueryBuilder();

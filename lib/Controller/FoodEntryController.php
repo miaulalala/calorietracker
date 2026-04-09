@@ -113,31 +113,35 @@ class FoodEntryController extends Controller {
 		}
 	}
 
+	/**
+	 * Partial update. Only fields present in the JSON body are changed.
+	 * Explicitly sending null for a nullable macro field clears it.
+	 */
 	#[NoAdminRequired]
-	public function patch(
-		int $id,
-		?string $foodName = null,
-		?int $caloriesPer100g = null,
-		?int $amountGrams = null,
-		?string $mealType = null,
-		?string $eatenAt = null,
-		?int $proteinPer100g = null,
-		?int $carbsPer100g = null,
-		?int $fatPer100g = null,
-	): JSONResponse {
+	public function patch(int $id): JSONResponse {
+		$allowedKeys = ['foodName', 'caloriesPer100g', 'amountGrams', 'mealType',
+			'eatenAt', 'proteinPer100g', 'carbsPer100g', 'fatPer100g'];
+		$fields = [];
+		foreach ($allowedKeys as $key) {
+			if ($this->request->getParam($key) !== null) {
+				$fields[$key] = $this->request->getParam($key);
+			}
+		}
+		// For nullable macro fields, detect explicit null in raw JSON body
+		// so clients can clear a value (e.g. {"proteinPer100g": null}).
+		$body = file_get_contents('php://input');
+		if ($body !== false && $body !== '') {
+			$decoded = json_decode($body, true);
+			if (is_array($decoded)) {
+				foreach (['proteinPer100g', 'carbsPer100g', 'fatPer100g'] as $key) {
+					if (array_key_exists($key, $decoded) && $decoded[$key] === null) {
+						$fields[$key] = null;
+					}
+				}
+			}
+		}
 		try {
-			$entry = $this->service->patch(
-				$id,
-				$this->userId,
-				$foodName,
-				$caloriesPer100g,
-				$amountGrams,
-				$mealType,
-				$eatenAt,
-				$proteinPer100g,
-				$carbsPer100g,
-				$fatPer100g,
-			);
+			$entry = $this->service->patch($id, $this->userId, $fields);
 			return new JSONResponse($entry);
 		} catch (DoesNotExistException) {
 			return new JSONResponse(['error' => 'Not found'], Http::STATUS_NOT_FOUND);
