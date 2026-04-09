@@ -145,6 +145,25 @@ class FoodEntryServiceTest extends TestCase {
 		$this->assertEquals('Banana', $result->getFoodName());
 	}
 
+	public function testPatchCastsStringValuesToInt(): void {
+		$entry = $this->makeEntry();
+		$this->mapper->method('findForUser')->willReturn($entry);
+		$this->mapper->method('update')->willReturnArgument(0);
+
+		$result = $this->service->patch(1, 'user1', ['amountGrams' => '250', 'caloriesPer100g' => '100']);
+		$this->assertSame(250, $result->getAmountGrams());
+		$this->assertSame(100, $result->getCaloriesPer100g());
+	}
+
+	public function testPatchRejectsNonNumericValue(): void {
+		$entry = $this->makeEntry();
+		$this->mapper->method('findForUser')->willReturn($entry);
+
+		$this->expectException(\InvalidArgumentException::class);
+		$this->expectExceptionMessage('amountGrams must be an integer.');
+		$this->service->patch(1, 'user1', ['amountGrams' => 'abc']);
+	}
+
 	public function testPatchClearsNullableMacro(): void {
 		$entry = $this->makeEntry();
 		$this->mapper->method('findForUser')->willReturn($entry);

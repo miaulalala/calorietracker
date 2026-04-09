@@ -193,44 +193,73 @@ class FoodEntryService {
 		$entry = $this->mapper->findForUser($id, $userId);
 
 		if (array_key_exists('foodName', $fields) && $fields['foodName'] !== null) {
+			if (!is_string($fields['foodName'])) {
+				throw new \InvalidArgumentException('foodName must be a string.');
+			}
 			$entry->setFoodName(mb_substr(trim($fields['foodName']), 0, self::MAX_FOOD_NAME_LENGTH, 'UTF-8'));
 		}
 		if (array_key_exists('caloriesPer100g', $fields) && $fields['caloriesPer100g'] !== null) {
-			$this->validatePositive('caloriesPer100g', $fields['caloriesPer100g'], self::MAX_CALORIES_PER_100G);
-			$entry->setCaloriesPer100g($fields['caloriesPer100g']);
+			$val = self::toInt('caloriesPer100g', $fields['caloriesPer100g']);
+			$this->validatePositive('caloriesPer100g', $val, self::MAX_CALORIES_PER_100G);
+			$entry->setCaloriesPer100g($val);
 		}
 		if (array_key_exists('amountGrams', $fields) && $fields['amountGrams'] !== null) {
-			$this->validatePositive('amountGrams', $fields['amountGrams'], self::MAX_AMOUNT_GRAMS);
-			$entry->setAmountGrams($fields['amountGrams']);
+			$val = self::toInt('amountGrams', $fields['amountGrams']);
+			$this->validatePositive('amountGrams', $val, self::MAX_AMOUNT_GRAMS);
+			$entry->setAmountGrams($val);
 		}
 		if (array_key_exists('mealType', $fields) && $fields['mealType'] !== null) {
+			if (!is_string($fields['mealType'])) {
+				throw new \InvalidArgumentException('mealType must be a string.');
+			}
 			$this->validateMealType($fields['mealType']);
 			$entry->setMealType($fields['mealType']);
 		}
 		if (array_key_exists('eatenAt', $fields) && $fields['eatenAt'] !== null) {
+			if (!is_string($fields['eatenAt'])) {
+				throw new \InvalidArgumentException('eatenAt must be a string.');
+			}
 			$this->validateDate($fields['eatenAt']);
 			$entry->setEatenAt($fields['eatenAt']);
 		}
 		if (array_key_exists('proteinPer100g', $fields)) {
 			if ($fields['proteinPer100g'] !== null) {
+				$fields['proteinPer100g'] = self::toInt('proteinPer100g', $fields['proteinPer100g']);
 				$this->validateMacro('proteinPer100g', $fields['proteinPer100g']);
 			}
 			$entry->setProteinPer100g($fields['proteinPer100g']);
 		}
 		if (array_key_exists('carbsPer100g', $fields)) {
 			if ($fields['carbsPer100g'] !== null) {
+				$fields['carbsPer100g'] = self::toInt('carbsPer100g', $fields['carbsPer100g']);
 				$this->validateMacro('carbsPer100g', $fields['carbsPer100g']);
 			}
 			$entry->setCarbsPer100g($fields['carbsPer100g']);
 		}
 		if (array_key_exists('fatPer100g', $fields)) {
 			if ($fields['fatPer100g'] !== null) {
+				$fields['fatPer100g'] = self::toInt('fatPer100g', $fields['fatPer100g']);
 				$this->validateMacro('fatPer100g', $fields['fatPer100g']);
 			}
 			$entry->setFatPer100g($fields['fatPer100g']);
 		}
 
 		return $this->mapper->update($entry);
+	}
+
+	/**
+	 * Safely cast a mixed value (typically string from request) to int.
+	 *
+	 * @throws \InvalidArgumentException if the value is not numeric
+	 */
+	private static function toInt(string $field, mixed $value): int {
+		if (is_int($value)) {
+			return $value;
+		}
+		if (is_string($value) && is_numeric($value) && !str_contains($value, '.')) {
+			return (int)$value;
+		}
+		throw new \InvalidArgumentException("$field must be an integer.");
 	}
 
 	private const MAX_BATCH_COPY = 50;

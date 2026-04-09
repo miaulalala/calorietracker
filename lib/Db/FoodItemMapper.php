@@ -46,7 +46,7 @@ class FoodItemMapper extends QBMapper {
 			->orderBy('agg.last_used', 'DESC')
 			->setMaxResults($limit);
 
-		// Forward the subquery's positional parameters
+		// Forward the subquery's named parameters and their types
 		foreach ($sub->getParameters() as $key => $value) {
 			$qb->setParameter($key, $value, $sub->getParameterType($key));
 		}
@@ -80,6 +80,7 @@ class FoodItemMapper extends QBMapper {
 			->orderBy('agg.use_count', 'DESC')
 			->setMaxResults($limit);
 
+		// Forward the subquery's named parameters and their types
 		foreach ($sub->getParameters() as $key => $value) {
 			$qb->setParameter($key, $value, $sub->getParameterType($key));
 		}
