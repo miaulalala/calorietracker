@@ -5,6 +5,12 @@
 
 <template>
 	<div class="food-entry-list">
+		<div v-if="!isEmpty" class="food-entry-list__add">
+			<NcButton variant="primary" @click="store.openAddModal()">
+				{{ t('calorietracker', 'Add food') }}
+			</NcButton>
+		</div>
+
 		<template v-for="mealType in mealOrder">
 			<div v-if="groups[mealType].length > 0" :key="mealType" class="food-entry-list__group">
 				<h4 class="food-entry-list__meal-heading">
@@ -46,7 +52,7 @@
 				<NcIconSvgWrapper :svg="iconFood" />
 			</template>
 			<template #action>
-				<NcButton type="primary" @click="store.openAddModal()">
+				<NcButton variant="primary" @click="store.openAddModal()">
 					{{ t('calorietracker', 'Add food') }}
 				</NcButton>
 			</template>
@@ -181,6 +187,12 @@ async function doDelete() {
 </script>
 
 <style scoped>
+.food-entry-list__add {
+	display: flex;
+	justify-content: flex-end;
+	margin-bottom: 16px;
+}
+
 .food-entry-list__group {
 	margin-bottom: 20px;
 }

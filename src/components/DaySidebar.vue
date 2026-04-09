@@ -6,7 +6,7 @@
 <template>
 	<NcAppNavigation :aria-label="t('calorietracker', 'Calorie tracker navigation')">
 		<template #default>
-			<NcButton class="day-sidebar__new-button" type="primary" @click="foodEntriesStore.openAddModal()">
+			<NcButton class="day-sidebar__new-button" variant="primary" @click="foodEntriesStore.openAddModal()">
 				+ {{ t('calorietracker', 'Add new entry') }}
 			</NcButton>
 		</template>

@@ -33,5 +33,9 @@ return [
 		// settings
 		['name' => 'settings#get', 'url' => '/settings', 'verb' => 'GET'],
 		['name' => 'settings#save', 'url' => '/settings', 'verb' => 'PUT'],
+
+		// tdee profile
+		['name' => 'tdee_profile#get', 'url' => '/tdee-profile', 'verb' => 'GET'],
+		['name' => 'tdee_profile#save', 'url' => '/tdee-profile', 'verb' => 'PUT'],
 	],
 ];
