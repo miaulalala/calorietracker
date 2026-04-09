@@ -190,7 +190,7 @@ class FoodEntryServiceTest extends TestCase {
 		$this->mapper->method('findAllForUserOnDate')->willReturn([]);
 
 		$this->expectException(\InvalidArgumentException::class);
-		$this->expectExceptionMessage('No entries found');
+		$this->expectExceptionMessage('No entries found on the source date.');
 		$this->service->batchCopy('user1', '2026-04-01', '2026-04-02');
 	}
 

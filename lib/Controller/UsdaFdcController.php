@@ -12,6 +12,7 @@ namespace OCA\CalorieTracker\Controller;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
+use OCP\AppFramework\Http\Attribute\UserRateLimit;
 use OCP\AppFramework\Http\JSONResponse;
 use OCP\Http\Client\IClientService;
 use OCP\ICache;
@@ -67,6 +68,7 @@ class UsdaFdcController extends Controller {
 	}
 
 	#[NoAdminRequired]
+	#[UserRateLimit(limit: 20, period: 60)]
 	public function search(string $query): JSONResponse {
 		$query = trim($query);
 		if (strlen($query) < 2) {
