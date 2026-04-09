@@ -16,6 +16,7 @@ use OCP\Http\Client\IClientService;
 use OCP\Http\Client\IResponse;
 use OCP\ICache;
 use OCP\ICacheFactory;
+use OCP\IConfig;
 use OCP\IRequest;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
@@ -29,6 +30,8 @@ class OpenFoodFactsControllerTest extends TestCase {
 	protected function setUp(): void {
 		$request = $this->createMock(IRequest::class);
 		$this->clientService = $this->createMock(IClientService::class);
+		$config = $this->createMock(IConfig::class);
+		$config->method('getAppValue')->willReturn('DEMO_KEY');
 		$logger = $this->createMock(LoggerInterface::class);
 		$this->cache = $this->createMock(ICache::class);
 		$cacheFactory = $this->createMock(ICacheFactory::class);
@@ -37,6 +40,7 @@ class OpenFoodFactsControllerTest extends TestCase {
 		$this->controller = new OpenFoodFactsController(
 			$request,
 			$this->clientService,
+			$config,
 			$logger,
 			$cacheFactory,
 		);
@@ -140,6 +144,19 @@ class OpenFoodFactsControllerTest extends TestCase {
 		$response = $this->controller->barcode('0041220080014');
 		$data = $response->getData();
 		$this->assertEquals('Zero-padded', $data['name']);
+	}
+
+	public function testBarcodeReturns502OnInvalidJson(): void {
+		$this->cache->method('get')->willReturn(null);
+
+		$apiResponse = $this->createMock(IResponse::class);
+		$apiResponse->method('getBody')->willReturn('not valid json');
+		$client = $this->createMock(IClient::class);
+		$client->method('get')->willReturn($apiResponse);
+		$this->clientService->method('newClient')->willReturn($client);
+
+		$response = $this->controller->barcode('0041220080014');
+		$this->assertEquals(Http::STATUS_BAD_GATEWAY, $response->getStatus());
 	}
 
 	public function testBarcodeReturns502OnApiFailure(): void {

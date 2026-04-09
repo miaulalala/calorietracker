@@ -3,3 +3,4 @@ js/
 vendor/
 build/
 .DS_Store
+tests/.phpunit.cache/

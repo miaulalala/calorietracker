@@ -17,6 +17,7 @@ use OCP\AppFramework\Http\JSONResponse;
 use OCP\Http\Client\IClientService;
 use OCP\ICache;
 use OCP\ICacheFactory;
+use OCP\IConfig;
 use OCP\IRequest;
 use Psr\Log\LoggerInterface;
 
@@ -34,10 +35,11 @@ class OpenFoodFactsController extends Controller {
 	private const FDC_SEARCH_URL = 'https://api.nal.usda.gov/fdc/v1/foods/search';
 
 	/**
-	 * Public demo key provided by api.data.gov — limited to ~30 req/hour per IP.
-	 * Users can configure their own free key at https://fdc.nal.usda.gov/api-key-signup
+	 * Fallback public demo key — limited to ~30 req/hour per server IP.
+	 * Admins can set a free key from https://fdc.nal.usda.gov/api-key-signup
+	 * via: occ config:app:set calorietracker usda_api_key --value=<KEY>
 	 */
-	private const FDC_API_KEY = 'DEMO_KEY';
+	private const FDC_API_KEY_DEFAULT = 'DEMO_KEY';
 
 	private const USER_AGENT = 'NextcloudCalorieTracker/1.0 (https://nextcloud.com)';
 	private const TTL_SEARCH  = 7 * 24 * 3600; // 7 d
@@ -56,6 +58,7 @@ class OpenFoodFactsController extends Controller {
 	public function __construct(
 		IRequest $request,
 		private IClientService $clientService,
+		private IConfig $config,
 		private LoggerInterface $logger,
 		ICacheFactory $cacheFactory,
 	) {
@@ -78,10 +81,11 @@ class OpenFoodFactsController extends Controller {
 		}
 
 		try {
+			$apiKey = $this->config->getAppValue('calorietracker', 'usda_api_key', self::FDC_API_KEY_DEFAULT);
 			$client = $this->clientService->newClient();
 			$response = $client->get(self::FDC_SEARCH_URL, [
 				'query' => [
-					'api_key' => self::FDC_API_KEY,
+					'api_key' => $apiKey,
 					'query' => $code,
 					'dataType' => 'Branded',
 					'pageSize' => 3,
@@ -91,6 +95,9 @@ class OpenFoodFactsController extends Controller {
 			]);
 
 			$data = json_decode($response->getBody(), true);
+			if (json_last_error() !== JSON_ERROR_NONE || !is_array($data)) {
+				throw new \RuntimeException('USDA FDC returned invalid JSON: ' . json_last_error_msg());
+			}
 			$foods = $data['foods'] ?? [];
 
 			// Find the first food whose gtinUpc matches the queried barcode
