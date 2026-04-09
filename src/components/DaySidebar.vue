@@ -34,7 +34,8 @@
 				:key="week.key"
 				:name="week.label"
 				:allow-collapse="true"
-				:open="week.open">
+				:open="week.open"
+				:to="{ path: '/week/' + week.key }">
 				<template #icon>
 					<svg xmlns="http://www.w3.org/2000/svg"
 						class="day-sidebar__week-icon"
@@ -92,6 +93,7 @@
 
 <script setup>
 import { computed } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { translate as t, translatePlural as n } from '@nextcloud/l10n'
 import NcAppNavigation from '@nextcloud/vue/components/NcAppNavigation'
@@ -101,6 +103,8 @@ import { useFoodEntriesStore } from '../stores/foodEntries.js'
 import { useSettingsStore } from '../stores/settings.js'
 import { toLocalDateString } from '../utils/date.js'
 
+const route = useRoute()
+const router = useRouter()
 const foodEntriesStore = useFoodEntriesStore()
 const settingsStore = useSettingsStore()
 const { currentDate, daySummaries } = storeToRefs(foodEntriesStore)
@@ -153,7 +157,15 @@ const weeks = computed(() => {
  * @param date
  */
 function selectDay(date) {
-	foodEntriesStore.setDate(date)
+	// When already on the day view, use setDate which also fetches entries.
+	if (route.path === '/') {
+		foodEntriesStore.setDate(date)
+		return
+	}
+	// When navigating from a different view (e.g. the weekly overview), only
+	// update the date here and let DayView fetch entries once on mount.
+	foodEntriesStore.currentDate = date
+	router.push('/')
 }
 
 foodEntriesStore.fetchSummaries()

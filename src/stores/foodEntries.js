@@ -87,16 +87,35 @@ export const useFoodEntriesStore = defineStore('foodEntries', {
 			await this.fetchEntries()
 		},
 
-		async fetchSummaries() {
+		async fetchSummaries(from = null, to = null) {
 			const now = new Date()
-			const to = toLocalDateString(now)
-			const from = toLocalDateString(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 29))
-			const summaries = await api.getSummaries(from, to)
-			const map = {}
+			const resolvedTo = to ?? toLocalDateString(now)
+			const resolvedFrom = from ?? toLocalDateString(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 29))
+			const summaries = await api.getSummaries(resolvedFrom, resolvedTo)
+			const incoming = {}
 			for (const s of summaries) {
-				map[s.date] = s
+				incoming[s.date] = s
 			}
-			this.daySummaries = map
+
+			// Drop existing keys within the fetched range before merging so that
+			// days that became empty (omitted by the API) don't leave stale data.
+			const updated = { ...this.daySummaries }
+			for (const date of Object.keys(updated)) {
+				if (date >= resolvedFrom && date <= resolvedTo) {
+					delete updated[date]
+				}
+			}
+
+			// Prune dates older than 90 days to prevent unbounded growth in
+			// long-lived sessions where a user browses many past weeks.
+			const cutoff = toLocalDateString(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 89))
+			for (const date of Object.keys(updated)) {
+				if (date < cutoff) {
+					delete updated[date]
+				}
+			}
+
+			this.daySummaries = { ...updated, ...incoming }
 		},
 
 		openAddModal(entry = null) {
