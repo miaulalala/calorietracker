@@ -13,7 +13,14 @@ export const useSettingsStore = defineStore('settings', {
 		dailyProteinGoal: 0,
 		dailyCarbsGoal: 0,
 		dailyFatGoal: 0,
+		energyUnit: 'kcal',
+		measurementSystem: 'metric',
 	}),
+
+	getters: {
+		isImperial: (state) => state.measurementSystem === 'imperial',
+		isKj: (state) => state.energyUnit === 'kj',
+	},
 
 	actions: {
 		async fetchSettings() {
@@ -22,6 +29,8 @@ export const useSettingsStore = defineStore('settings', {
 			this.dailyProteinGoal = data.dailyProteinGoal ?? 0
 			this.dailyCarbsGoal = data.dailyCarbsGoal ?? 0
 			this.dailyFatGoal = data.dailyFatGoal ?? 0
+			this.energyUnit = data.energyUnit ?? 'kcal'
+			this.measurementSystem = data.measurementSystem ?? 'metric'
 		},
 
 		async saveSettings(goals) {
@@ -30,6 +39,8 @@ export const useSettingsStore = defineStore('settings', {
 			this.dailyProteinGoal = data.dailyProteinGoal ?? 0
 			this.dailyCarbsGoal = data.dailyCarbsGoal ?? 0
 			this.dailyFatGoal = data.dailyFatGoal ?? 0
+			this.energyUnit = data.energyUnit ?? 'kcal'
+			this.measurementSystem = data.measurementSystem ?? 'metric'
 		},
 
 		openSettings() {

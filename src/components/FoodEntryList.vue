@@ -16,7 +16,7 @@
 				<h4 class="food-entry-list__meal-heading">
 					{{ mealLabel(mealType) }}
 					<span class="food-entry-list__meal-total">
-						{{ mealTotal(groups[mealType]) }} kcal
+						{{ mealTotal(groups[mealType]) }} {{ energyLabel }}
 					</span>
 				</h4>
 
@@ -76,6 +76,7 @@ import NcIconSvgWrapper from '@nextcloud/vue/components/NcIconSvgWrapper'
 import NcEmptyContent from '@nextcloud/vue/components/NcEmptyContent'
 import NcDialog from '@nextcloud/vue/components/NcDialog'
 import { useFoodEntriesStore } from '../stores/foodEntries.js'
+import { useUnits } from '../composables/useUnits.js'
 
 const props = defineProps({
 	groups: {
@@ -85,6 +86,7 @@ const props = defineProps({
 })
 
 const store = useFoodEntriesStore()
+const { displayEnergy, displayWeight, energyLabel, weightLabel, entryEnergy, entryMacroGrams } = useUnits()
 
 const iconPencil = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20.71 7.04c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.37-.39-1.02-.39-1.41 0l-1.84 1.83 3.75 3.75M3 17.25V21h3.75L17.81 9.93l-3.75-3.75L3 17.25z"/></svg>'
 const iconTrash = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 4h-3.5l-1-1h-5l-1 1H5v2h14M6 19a2 2 0 002 2h8a2 2 0 002-2V7H6v12z"/></svg>'
@@ -115,8 +117,8 @@ const deleteDialogButtons = computed(() => [
 ])
 
 /**
- *
- * @param type
+ * Get the translated label for a meal type.
+ * @param {string} type Meal type identifier
  */
 function mealLabel(type) {
 	const labels = {
@@ -129,31 +131,24 @@ function mealLabel(type) {
 }
 
 /**
- *
- * @param entry
- */
-function entryCalories(entry) {
-	return Math.round(entry.caloriesPer100g * entry.amountGrams / 100)
-}
-
-/**
- *
- * @param entry
+ * Build the subtitle string for a food entry.
+ * @param {object} entry Food entry object
  */
 function entrySubname(entry) {
 	const parts = [
-		entry.amountGrams + 'g',
-		entryCalories(entry) + ' kcal',
+		displayWeight(entry.amountGrams) + weightLabel.value,
+		entryEnergy(entry.caloriesPer100g, entry.amountGrams) + ' ' + energyLabel.value,
 	]
+	const wu = weightLabel.value
 	const macros = []
 	if (entry.proteinPer100g != null) {
-		macros.push('P ' + Math.round(entry.proteinPer100g * entry.amountGrams / 100) + 'g')
+		macros.push('P ' + entryMacroGrams(entry.proteinPer100g, entry.amountGrams) + wu)
 	}
 	if (entry.carbsPer100g != null) {
-		macros.push('C ' + Math.round(entry.carbsPer100g * entry.amountGrams / 100) + 'g')
+		macros.push('C ' + entryMacroGrams(entry.carbsPer100g, entry.amountGrams) + wu)
 	}
 	if (entry.fatPer100g != null) {
-		macros.push('F ' + Math.round(entry.fatPer100g * entry.amountGrams / 100) + 'g')
+		macros.push('F ' + entryMacroGrams(entry.fatPer100g, entry.amountGrams) + wu)
 	}
 	if (macros.length > 0) {
 		parts.push(macros.join('  '))
@@ -162,16 +157,17 @@ function entrySubname(entry) {
 }
 
 /**
- *
- * @param entries
+ * Calculate total energy for a list of entries.
+ * @param {Array} entries List of food entries
  */
 function mealTotal(entries) {
-	return entries.reduce((sum, e) => sum + entryCalories(e), 0)
+	const kcal = entries.reduce((sum, e) => sum + Math.round(e.caloriesPer100g * e.amountGrams / 100), 0)
+	return displayEnergy(kcal)
 }
 
 /**
- *
- * @param entry
+ * Set the entry to be deleted and show confirmation.
+ * @param {object} entry Food entry to delete
  */
 function confirmDelete(entry) {
 	deleteTarget.value = entry

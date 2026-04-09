@@ -46,6 +46,21 @@ describe('settings store', () => {
 			expect(store.dailyCarbsGoal).toBe(0)
 			expect(store.dailyFatGoal).toBe(0)
 		})
+
+		test('fetches and updates unit preferences', async () => {
+			const data = { dailyCalorieGoal: 0, energyUnit: 'kj', measurementSystem: 'imperial' }
+			api.getSettings.mockResolvedValue(data)
+			await store.fetchSettings()
+			expect(store.energyUnit).toBe('kj')
+			expect(store.measurementSystem).toBe('imperial')
+		})
+
+		test('defaults unit preferences when missing', async () => {
+			api.getSettings.mockResolvedValue({})
+			await store.fetchSettings()
+			expect(store.energyUnit).toBe('kcal')
+			expect(store.measurementSystem).toBe('metric')
+		})
 	})
 
 	describe('saveSettings', () => {
@@ -55,6 +70,38 @@ describe('settings store', () => {
 			await store.saveSettings(goals)
 			expect(api.saveSettings).toHaveBeenCalledWith(goals)
 			expect(store.dailyCalorieGoal).toBe(1800)
+		})
+
+		test('saves and updates unit preferences from response', async () => {
+			const payload = { dailyCalorieGoal: 2000, energyUnit: 'kj', measurementSystem: 'imperial' }
+			api.saveSettings.mockResolvedValue(payload)
+			await store.saveSettings(payload)
+			expect(store.energyUnit).toBe('kj')
+			expect(store.measurementSystem).toBe('imperial')
+		})
+	})
+
+	// ─── Getters ──────────────────────────────────────────────────────────────
+
+	describe('getters', () => {
+		test('isImperial returns true when measurementSystem is imperial', () => {
+			store.measurementSystem = 'imperial'
+			expect(store.isImperial).toBe(true)
+		})
+
+		test('isImperial returns false when measurementSystem is metric', () => {
+			store.measurementSystem = 'metric'
+			expect(store.isImperial).toBe(false)
+		})
+
+		test('isKj returns true when energyUnit is kj', () => {
+			store.energyUnit = 'kj'
+			expect(store.isKj).toBe(true)
+		})
+
+		test('isKj returns false when energyUnit is kcal', () => {
+			store.energyUnit = 'kcal'
+			expect(store.isKj).toBe(false)
 		})
 	})
 

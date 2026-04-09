@@ -24,13 +24,27 @@ class SettingsController extends Controller {
 		parent::__construct('calorietracker', $request);
 	}
 
+	private const VALID_ENERGY_UNITS = ['kcal', 'kj'];
+	private const VALID_MEASUREMENT_SYSTEMS = ['metric', 'imperial'];
+
 	#[NoAdminRequired]
 	public function get(): JSONResponse {
+		$energyUnit = $this->config->getUserValue($this->userId, 'calorietracker', 'energyUnit', 'kcal');
+		if (!in_array($energyUnit, self::VALID_ENERGY_UNITS, true)) {
+			$energyUnit = 'kcal';
+		}
+		$measurementSystem = $this->config->getUserValue($this->userId, 'calorietracker', 'measurementSystem', 'metric');
+		if (!in_array($measurementSystem, self::VALID_MEASUREMENT_SYSTEMS, true)) {
+			$measurementSystem = 'metric';
+		}
+
 		return new JSONResponse([
-			'dailyCalorieGoal' => (int) $this->config->getUserValue($this->userId, 'calorietracker', 'dailyCalorieGoal', '0'),
-			'dailyProteinGoal' => (int) $this->config->getUserValue($this->userId, 'calorietracker', 'dailyProteinGoal', '0'),
-			'dailyCarbsGoal'   => (int) $this->config->getUserValue($this->userId, 'calorietracker', 'dailyCarbsGoal', '0'),
-			'dailyFatGoal'     => (int) $this->config->getUserValue($this->userId, 'calorietracker', 'dailyFatGoal', '0'),
+			'dailyCalorieGoal'  => (int) $this->config->getUserValue($this->userId, 'calorietracker', 'dailyCalorieGoal', '0'),
+			'dailyProteinGoal'  => (int) $this->config->getUserValue($this->userId, 'calorietracker', 'dailyProteinGoal', '0'),
+			'dailyCarbsGoal'    => (int) $this->config->getUserValue($this->userId, 'calorietracker', 'dailyCarbsGoal', '0'),
+			'dailyFatGoal'      => (int) $this->config->getUserValue($this->userId, 'calorietracker', 'dailyFatGoal', '0'),
+			'energyUnit'        => $energyUnit,
+			'measurementSystem' => $measurementSystem,
 		]);
 	}
 
@@ -40,6 +54,8 @@ class SettingsController extends Controller {
 		?int $dailyProteinGoal = null,
 		?int $dailyCarbsGoal = null,
 		?int $dailyFatGoal = null,
+		?string $energyUnit = null,
+		?string $measurementSystem = null,
 	): JSONResponse {
 		$this->config->setUserValue($this->userId, 'calorietracker', 'dailyCalorieGoal', (string) max(0, $dailyCalorieGoal));
 
@@ -54,11 +70,30 @@ class SettingsController extends Controller {
 			$this->config->setUserValue($this->userId, 'calorietracker', 'dailyFatGoal', (string) max(0, $dailyFatGoal));
 		}
 
+		// Only update unit preferences when explicitly provided; otherwise preserve stored values.
+		if ($energyUnit !== null && in_array($energyUnit, self::VALID_ENERGY_UNITS, true)) {
+			$this->config->setUserValue($this->userId, 'calorietracker', 'energyUnit', $energyUnit);
+		}
+		if ($measurementSystem !== null && in_array($measurementSystem, self::VALID_MEASUREMENT_SYSTEMS, true)) {
+			$this->config->setUserValue($this->userId, 'calorietracker', 'measurementSystem', $measurementSystem);
+		}
+
+		$storedEnergyUnit = $this->config->getUserValue($this->userId, 'calorietracker', 'energyUnit', 'kcal');
+		if (!in_array($storedEnergyUnit, self::VALID_ENERGY_UNITS, true)) {
+			$storedEnergyUnit = 'kcal';
+		}
+		$storedMeasurementSystem = $this->config->getUserValue($this->userId, 'calorietracker', 'measurementSystem', 'metric');
+		if (!in_array($storedMeasurementSystem, self::VALID_MEASUREMENT_SYSTEMS, true)) {
+			$storedMeasurementSystem = 'metric';
+		}
+
 		return new JSONResponse([
-			'dailyCalorieGoal' => max(0, $dailyCalorieGoal),
-			'dailyProteinGoal' => (int) $this->config->getUserValue($this->userId, 'calorietracker', 'dailyProteinGoal', '0'),
-			'dailyCarbsGoal'   => (int) $this->config->getUserValue($this->userId, 'calorietracker', 'dailyCarbsGoal', '0'),
-			'dailyFatGoal'     => (int) $this->config->getUserValue($this->userId, 'calorietracker', 'dailyFatGoal', '0'),
+			'dailyCalorieGoal'  => max(0, $dailyCalorieGoal),
+			'dailyProteinGoal'  => (int) $this->config->getUserValue($this->userId, 'calorietracker', 'dailyProteinGoal', '0'),
+			'dailyCarbsGoal'    => (int) $this->config->getUserValue($this->userId, 'calorietracker', 'dailyCarbsGoal', '0'),
+			'dailyFatGoal'      => (int) $this->config->getUserValue($this->userId, 'calorietracker', 'dailyFatGoal', '0'),
+			'energyUnit'        => $storedEnergyUnit,
+			'measurementSystem' => $storedMeasurementSystem,
 		]);
 	}
 }

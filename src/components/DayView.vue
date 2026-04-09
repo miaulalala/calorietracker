@@ -7,14 +7,18 @@
 	<div class="day-view">
 		<!-- Date navigation -->
 		<div class="day-view__header">
-			<NcButton variant="tertiary" :ariaLabel="t('calorietracker', 'Previous day')" @click="changeDay(-1)">
-				<template #icon>‹</template>
+			<NcButton variant="tertiary" :aria-label="t('calorietracker', 'Previous day')" @click="changeDay(-1)">
+				<template #icon>
+					‹
+				</template>
 			</NcButton>
 			<h2 class="day-view__date">
 				{{ formattedDate }}
 			</h2>
-			<NcButton variant="tertiary" :ariaLabel="t('calorietracker', 'Next day')" @click="changeDay(1)">
-				<template #icon>›</template>
+			<NcButton variant="tertiary" :aria-label="t('calorietracker', 'Next day')" @click="changeDay(1)">
+				<template #icon>
+					›
+				</template>
 			</NcButton>
 			<NcButton v-if="!isToday" variant="tertiary" @click="goToToday">
 				{{ t('calorietracker', 'Today') }}
@@ -25,13 +29,13 @@
 		<div class="day-view__summary">
 			<template v-if="calorieGoal > 0">
 				<div class="day-view__summary-line">
-					<span>{{ t('calorietracker', '{kcal} / {goal} kcal', { kcal: totalCalories, goal: calorieGoal }) }}</span>
+					<span>{{ t('calorietracker', '{energy} / {goal} {unit}', { energy: totalCalories, goal: displayCalorieGoal, unit: energyLabel }) }}</span>
 					<span class="day-view__summary-pct">{{ caloriePct }}%</span>
 				</div>
 				<NcProgressBar class="day-view__calorie-bar" :value="Math.min(caloriePct, 100)" aria-hidden="true" />
 			</template>
 			<template v-else>
-				{{ t('calorietracker', 'Total: {kcal} kcal', { kcal: totalCalories }) }}
+				{{ t('calorietracker', 'Total: {energy} {unit}', { energy: totalCalories, unit: energyLabel }) }}
 			</template>
 		</div>
 
@@ -40,17 +44,17 @@
 			<div class="day-view__macro">
 				<span class="day-view__macro-label">{{ t('calorietracker', 'Protein') }}</span>
 				<NcProgressBar class="day-view__macro-bar day-view__macro-bar--protein" :value="macroTotalsWithGoals.protein.barPct" aria-hidden="true" />
-				<span class="day-view__macro-value">{{ macroTotalsWithGoals.protein.grams }}g<template v-if="proteinGoal > 0"> / {{ proteinGoal }}g</template></span>
+				<span class="day-view__macro-value">{{ displayWeight(macroTotalsWithGoals.protein.grams) }}{{ weightLabel }}<template v-if="proteinGoal > 0"> / {{ displayGoal(proteinGoal) }}{{ weightLabel }}</template></span>
 			</div>
 			<div class="day-view__macro">
 				<span class="day-view__macro-label">{{ t('calorietracker', 'Carbs') }}</span>
 				<NcProgressBar class="day-view__macro-bar day-view__macro-bar--carbs" :value="macroTotalsWithGoals.carbs.barPct" aria-hidden="true" />
-				<span class="day-view__macro-value">{{ macroTotalsWithGoals.carbs.grams }}g<template v-if="carbsGoal > 0"> / {{ carbsGoal }}g</template></span>
+				<span class="day-view__macro-value">{{ displayWeight(macroTotalsWithGoals.carbs.grams) }}{{ weightLabel }}<template v-if="carbsGoal > 0"> / {{ displayGoal(carbsGoal) }}{{ weightLabel }}</template></span>
 			</div>
 			<div class="day-view__macro">
 				<span class="day-view__macro-label">{{ t('calorietracker', 'Fat') }}</span>
 				<NcProgressBar class="day-view__macro-bar day-view__macro-bar--fat" :value="macroTotalsWithGoals.fat.barPct" aria-hidden="true" />
-				<span class="day-view__macro-value">{{ macroTotalsWithGoals.fat.grams }}g<template v-if="fatGoal > 0"> / {{ fatGoal }}g</template></span>
+				<span class="day-view__macro-value">{{ displayWeight(macroTotalsWithGoals.fat.grams) }}{{ weightLabel }}<template v-if="fatGoal > 0"> / {{ displayGoal(fatGoal) }}{{ weightLabel }}</template></span>
 			</div>
 		</div>
 
@@ -68,21 +72,26 @@ import NcProgressBar from '@nextcloud/vue/components/NcProgressBar'
 import FoodEntryList from './FoodEntryList.vue'
 import { useFoodEntriesStore } from '../stores/foodEntries.js'
 import { useSettingsStore } from '../stores/settings.js'
+import { useUnits } from '../composables/useUnits.js'
 import { toLocalDateString } from '../utils/date.js'
 
 const foodEntriesStore = useFoodEntriesStore()
 const settingsStore = useSettingsStore()
+const { displayEnergy, displayWeight, energyLabel, weightLabel } = useUnits()
 
 const { currentDate } = storeToRefs(foodEntriesStore)
 const { dailyCalorieGoal: calorieGoal, dailyProteinGoal: proteinGoal, dailyCarbsGoal: carbsGoal, dailyFatGoal: fatGoal } = storeToRefs(settingsStore)
 
-const totalCalories = computed(() => foodEntriesStore.totalCalories)
+const totalCalories = computed(() => displayEnergy(foodEntriesStore.totalCalories))
+const displayCalorieGoal = computed(() => displayEnergy(calorieGoal.value))
+const displayGoal = (goalGrams) => displayWeight(goalGrams)
 const entriesByMealType = computed(() => foodEntriesStore.entriesByMealType)
 const macroTotals = computed(() => foodEntriesStore.macroTotals)
 
 const caloriePct = computed(() => {
 	if (!calorieGoal.value) return 0
-	return Math.round(totalCalories.value / calorieGoal.value * 100)
+	// Use raw kcal values for both sides so the percentage is unit-independent.
+	return Math.round(foodEntriesStore.totalCalories / calorieGoal.value * 100)
 })
 
 const macroTotalsWithGoals = computed(() => {
@@ -113,8 +122,8 @@ const formattedDate = computed(() => {
 const isToday = computed(() => currentDate.value === toLocalDateString())
 
 /**
- *
- * @param delta
+ * Navigate forward or backward by a number of days.
+ * @param {number} delta Number of days to shift
  */
 function changeDay(delta) {
 	const [year, month, day] = currentDate.value.split('-').map(Number)
