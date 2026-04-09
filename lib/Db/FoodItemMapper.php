@@ -20,6 +20,75 @@ class FoodItemMapper extends QBMapper {
 	}
 
 	/**
+	 * Return food items sorted by most recently used (latest entry eaten_at).
+	 *
+	 * Uses a subquery to aggregate per food_item_id, then joins back to the
+	 * items table so all columns are available without violating SQL strict
+	 * GROUP BY rules (required by PostgreSQL / SQLite).
+	 *
+	 * @return FoodItem[]
+	 */
+	public function findRecentForUser(string $userId, int $limit = 25): array {
+		$sub = $this->db->getQueryBuilder();
+		$sub->select('food_item_id')
+			->selectAlias($sub->func()->max('eaten_at'), 'last_used')
+			->from('caltracker_food_entries')
+			->where($sub->expr()->isNotNull('food_item_id'))
+			->andWhere($sub->expr()->eq('user_id', $sub->createNamedParameter($userId)))
+			->groupBy('food_item_id');
+
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('fi.*')
+			->from($this->getTableName(), 'fi')
+			->innerJoin('fi', $qb->createFunction('(' . $sub->getSQL() . ')'), 'agg',
+				$qb->expr()->eq('fi.id', 'agg.food_item_id'))
+			->where($qb->expr()->eq('fi.user_id', $qb->createNamedParameter($userId)))
+			->orderBy('agg.last_used', 'DESC')
+			->setMaxResults($limit);
+
+		// Forward the subquery's named parameters and their types
+		foreach ($sub->getParameters() as $key => $value) {
+			$qb->setParameter($key, $value, $sub->getParameterType($key));
+		}
+
+		return $this->findEntities($qb);
+	}
+
+	/**
+	 * Return food items sorted by usage frequency (most entries first).
+	 *
+	 * Uses a subquery to compute counts per food_item_id, then joins back
+	 * to avoid non-aggregated columns in SELECT with GROUP BY (PostgreSQL).
+	 *
+	 * @return FoodItem[]
+	 */
+	public function findFrequentForUser(string $userId, int $limit = 25): array {
+		$sub = $this->db->getQueryBuilder();
+		$sub->select('food_item_id')
+			->selectAlias($sub->func()->count('id'), 'use_count')
+			->from('caltracker_food_entries')
+			->where($sub->expr()->isNotNull('food_item_id'))
+			->andWhere($sub->expr()->eq('user_id', $sub->createNamedParameter($userId)))
+			->groupBy('food_item_id');
+
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('fi.*')
+			->from($this->getTableName(), 'fi')
+			->innerJoin('fi', $qb->createFunction('(' . $sub->getSQL() . ')'), 'agg',
+				$qb->expr()->eq('fi.id', 'agg.food_item_id'))
+			->where($qb->expr()->eq('fi.user_id', $qb->createNamedParameter($userId)))
+			->orderBy('agg.use_count', 'DESC')
+			->setMaxResults($limit);
+
+		// Forward the subquery's named parameters and their types
+		foreach ($sub->getParameters() as $key => $value) {
+			$qb->setParameter($key, $value, $sub->getParameterType($key));
+		}
+
+		return $this->findEntities($qb);
+	}
+
+	/**
 	 * Find an existing food item by source + external_id, or return null.
 	 */
 	public function findBySourceId(string $userId, string $source, string $externalId): ?FoodItem {

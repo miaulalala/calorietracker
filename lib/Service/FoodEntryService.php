@@ -28,6 +28,10 @@ class FoodEntryService {
 	) {
 	}
 
+	public function find(int $id, string $userId): FoodEntry {
+		return $this->mapper->findForUser($id, $userId);
+	}
+
 	/**
 	 * @return FoodEntry[]
 	 */
@@ -174,6 +178,133 @@ class FoodEntryService {
 		}
 
 		return array_values($byDate);
+	}
+
+	/**
+	 * Partial update — only fields present in $fields are changed.
+	 *
+	 * Uses array_key_exists so that explicitly passing null for a nullable
+	 * field (e.g. proteinPer100g) clears it, while omitting the key leaves
+	 * the current value untouched.
+	 *
+	 * @param array<string, mixed> $fields
+	 */
+	public function patch(int $id, string $userId, array $fields): FoodEntry {
+		$entry = $this->mapper->findForUser($id, $userId);
+
+		if (array_key_exists('foodName', $fields) && $fields['foodName'] !== null) {
+			if (!is_string($fields['foodName'])) {
+				throw new \InvalidArgumentException('foodName must be a string.');
+			}
+			$entry->setFoodName(mb_substr(trim($fields['foodName']), 0, self::MAX_FOOD_NAME_LENGTH, 'UTF-8'));
+		}
+		if (array_key_exists('caloriesPer100g', $fields) && $fields['caloriesPer100g'] !== null) {
+			$val = self::toInt('caloriesPer100g', $fields['caloriesPer100g']);
+			$this->validatePositive('caloriesPer100g', $val, self::MAX_CALORIES_PER_100G);
+			$entry->setCaloriesPer100g($val);
+		}
+		if (array_key_exists('amountGrams', $fields) && $fields['amountGrams'] !== null) {
+			$val = self::toInt('amountGrams', $fields['amountGrams']);
+			$this->validatePositive('amountGrams', $val, self::MAX_AMOUNT_GRAMS);
+			$entry->setAmountGrams($val);
+		}
+		if (array_key_exists('mealType', $fields) && $fields['mealType'] !== null) {
+			if (!is_string($fields['mealType'])) {
+				throw new \InvalidArgumentException('mealType must be a string.');
+			}
+			$this->validateMealType($fields['mealType']);
+			$entry->setMealType($fields['mealType']);
+		}
+		if (array_key_exists('eatenAt', $fields) && $fields['eatenAt'] !== null) {
+			if (!is_string($fields['eatenAt'])) {
+				throw new \InvalidArgumentException('eatenAt must be a string.');
+			}
+			$this->validateDate($fields['eatenAt']);
+			$entry->setEatenAt($fields['eatenAt']);
+		}
+		if (array_key_exists('proteinPer100g', $fields)) {
+			if ($fields['proteinPer100g'] !== null) {
+				$fields['proteinPer100g'] = self::toInt('proteinPer100g', $fields['proteinPer100g']);
+				$this->validateMacro('proteinPer100g', $fields['proteinPer100g']);
+			}
+			$entry->setProteinPer100g($fields['proteinPer100g']);
+		}
+		if (array_key_exists('carbsPer100g', $fields)) {
+			if ($fields['carbsPer100g'] !== null) {
+				$fields['carbsPer100g'] = self::toInt('carbsPer100g', $fields['carbsPer100g']);
+				$this->validateMacro('carbsPer100g', $fields['carbsPer100g']);
+			}
+			$entry->setCarbsPer100g($fields['carbsPer100g']);
+		}
+		if (array_key_exists('fatPer100g', $fields)) {
+			if ($fields['fatPer100g'] !== null) {
+				$fields['fatPer100g'] = self::toInt('fatPer100g', $fields['fatPer100g']);
+				$this->validateMacro('fatPer100g', $fields['fatPer100g']);
+			}
+			$entry->setFatPer100g($fields['fatPer100g']);
+		}
+
+		return $this->mapper->update($entry);
+	}
+
+	/**
+	 * Safely cast a mixed value (typically string from request) to int.
+	 *
+	 * @throws \InvalidArgumentException if the value is not numeric
+	 */
+	private static function toInt(string $field, mixed $value): int {
+		if (is_int($value)) {
+			return $value;
+		}
+		if (is_string($value) && is_numeric($value) && !str_contains($value, '.')) {
+			return (int)$value;
+		}
+		throw new \InvalidArgumentException("$field must be an integer.");
+	}
+
+	private const MAX_BATCH_COPY = 50;
+
+	/**
+	 * Copy all entries from one date to another.
+	 *
+	 * @return FoodEntry[] the newly created entries
+	 */
+	public function batchCopy(string $userId, string $fromDate, string $toDate, ?string $mealType = null): array {
+		$this->validateDate($fromDate);
+		$this->validateDate($toDate);
+		if ($mealType !== null) {
+			$this->validateMealType($mealType);
+		}
+
+		$sourceEntries = $this->mapper->findAllForUserOnDate($userId, $fromDate);
+		if ($mealType !== null) {
+			$sourceEntries = array_filter($sourceEntries, fn (FoodEntry $e) => $e->getMealType() === $mealType);
+		}
+
+		if (count($sourceEntries) === 0) {
+			throw new \InvalidArgumentException('No entries found on the source date.');
+		}
+		if (count($sourceEntries) > self::MAX_BATCH_COPY) {
+			throw new \InvalidArgumentException('Too many entries to copy (max ' . self::MAX_BATCH_COPY . ').');
+		}
+
+		$created = [];
+		foreach ($sourceEntries as $src) {
+			$entry = new FoodEntry();
+			$entry->setUserId($userId);
+			$entry->setFoodName($src->getFoodName());
+			$entry->setCaloriesPer100g($src->getCaloriesPer100g());
+			$entry->setAmountGrams($src->getAmountGrams());
+			$entry->setMealType($src->getMealType());
+			$entry->setEatenAt($toDate);
+			$entry->setProteinPer100g($src->getProteinPer100g());
+			$entry->setCarbsPer100g($src->getCarbsPer100g());
+			$entry->setFatPer100g($src->getFatPer100g());
+			$entry->setFoodItemId($src->getFoodItemId());
+			$created[] = $this->mapper->insert($entry);
+		}
+
+		return $created;
 	}
 
 	public function delete(int $id, string $userId): FoodEntry {

@@ -9,10 +9,12 @@ declare(strict_types=1);
 
 namespace OCA\CalorieTracker\AppInfo;
 
+use OCA\CalorieTracker\Controller\ApiController;
 use OCP\AppFramework\App;
 use OCP\AppFramework\Bootstrap\IBootContext;
 use OCP\AppFramework\Bootstrap\IBootstrap;
 use OCP\AppFramework\Bootstrap\IRegistrationContext;
+use OCP\IAppConfig;
 
 class Application extends App implements IBootstrap {
 	public const APP_ID = 'calorietracker';
@@ -22,6 +24,13 @@ class Application extends App implements IBootstrap {
 	}
 
 	public function register(IRegistrationContext $context): void {
+		$context->registerService(ApiController::class, function ($c) {
+			$appConfig = $c->get(IAppConfig::class);
+			return new ApiController(
+				$c->get(\OCP\IRequest::class),
+				$appConfig->getValueString(self::APP_ID, 'installed_version', '0.0.0'),
+			);
+		});
 	}
 
 	public function boot(IBootContext $context): void {

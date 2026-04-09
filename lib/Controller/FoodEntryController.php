@@ -29,6 +29,15 @@ class FoodEntryController extends Controller {
 	}
 
 	#[NoAdminRequired]
+	public function show(int $id): JSONResponse {
+		try {
+			return new JSONResponse($this->service->find($id, $this->userId));
+		} catch (DoesNotExistException) {
+			return new JSONResponse(['error' => 'Not found'], Http::STATUS_NOT_FOUND);
+		}
+	}
+
+	#[NoAdminRequired]
 	public function index(string $date): JSONResponse {
 		try {
 			return new JSONResponse($this->service->findAllForDay($this->userId, $date));
@@ -104,6 +113,43 @@ class FoodEntryController extends Controller {
 		}
 	}
 
+	/**
+	 * Partial update. Only fields present in the JSON body are changed.
+	 * Explicitly sending null for a nullable macro field clears it.
+	 */
+	#[NoAdminRequired]
+	public function patch(int $id): JSONResponse {
+		$allowedKeys = ['foodName', 'caloriesPer100g', 'amountGrams', 'mealType',
+			'eatenAt', 'proteinPer100g', 'carbsPer100g', 'fatPer100g'];
+		$fields = [];
+		foreach ($allowedKeys as $key) {
+			if ($this->request->getParam($key) !== null) {
+				$fields[$key] = $this->request->getParam($key);
+			}
+		}
+		// For nullable macro fields, detect explicit null in raw JSON body
+		// so clients can clear a value (e.g. {"proteinPer100g": null}).
+		$body = file_get_contents('php://input');
+		if ($body !== false && $body !== '') {
+			$decoded = json_decode($body, true);
+			if (is_array($decoded)) {
+				foreach (['proteinPer100g', 'carbsPer100g', 'fatPer100g'] as $key) {
+					if (array_key_exists($key, $decoded) && $decoded[$key] === null) {
+						$fields[$key] = null;
+					}
+				}
+			}
+		}
+		try {
+			$entry = $this->service->patch($id, $this->userId, $fields);
+			return new JSONResponse($entry);
+		} catch (DoesNotExistException) {
+			return new JSONResponse(['error' => 'Not found'], Http::STATUS_NOT_FOUND);
+		} catch (\InvalidArgumentException $e) {
+			return new JSONResponse(['error' => $e->getMessage()], Http::STATUS_BAD_REQUEST);
+		}
+	}
+
 	#[NoAdminRequired]
 	public function delete(int $id): JSONResponse {
 		try {
@@ -112,6 +158,16 @@ class FoodEntryController extends Controller {
 		} catch (DoesNotExistException) {
 			$this->logger->info('Food entry {id} not found for user during delete', ['id' => $id, 'app' => 'calorietracker']);
 			return new JSONResponse(['error' => 'Not found'], Http::STATUS_NOT_FOUND);
+		}
+	}
+
+	#[NoAdminRequired]
+	public function batch(string $fromDate, string $toDate, ?string $mealType = null): JSONResponse {
+		try {
+			$entries = $this->service->batchCopy($this->userId, $fromDate, $toDate, $mealType);
+			return new JSONResponse($entries, Http::STATUS_CREATED);
+		} catch (\InvalidArgumentException $e) {
+			return new JSONResponse(['error' => $e->getMessage()], Http::STATUS_BAD_REQUEST);
 		}
 	}
 
