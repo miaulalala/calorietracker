@@ -11,23 +11,25 @@
 			</NcButton>
 		</template>
 		<template #footer>
-			<NcAppNavigationItem :name="t('calorietracker', 'Daily goals')"
-				@click="settingsStore.openSettings()">
-				<template #icon>
-					<svg xmlns="http://www.w3.org/2000/svg"
-						class="day-sidebar__week-icon"
-						viewBox="0 0 24 24"
-						fill="none"
-						stroke="currentColor"
-						stroke-width="2"
-						stroke-linecap="round"
-						stroke-linejoin="round"
-						aria-hidden="true">
-						<circle cx="12" cy="12" r="3" />
-						<path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-					</svg>
-				</template>
-			</NcAppNavigationItem>
+			<div class="day-sidebar__settings-container">
+				<NcButton variant="tertiary" wide @click="settingsStore.openSettings()">
+					<template #icon>
+						<svg xmlns="http://www.w3.org/2000/svg"
+							class="day-sidebar__week-icon"
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="2"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							aria-hidden="true">
+							<circle cx="12" cy="12" r="3" />
+							<path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+						</svg>
+					</template>
+					{{ t('calorietracker', 'App settings') }}
+				</NcButton>
+			</div>
 		</template>
 		<template #list>
 			<NcAppNavigationItem v-for="week in weeks"
@@ -78,7 +80,7 @@
 							@keydown.space.prevent="selectDay(day.date)">
 							<span class="day-sidebar__day-name">{{ day.label }}</span>
 							<span v-if="day.summary" class="day-sidebar__day-stats">
-								{{ day.summary.totalKcal }} kcal &middot; {{ day.summary.totalKj }} kJ &middot; {{ day.summary.itemCount }} {{ n('calorietracker', 'item', 'items', day.summary.itemCount) }}
+								{{ displayEnergy(day.summary.totalKcal) }} {{ energyLabel }} &middot; {{ day.summary.itemCount }} {{ n('calorietracker', 'item', 'items', day.summary.itemCount) }}
 							</span>
 							<span v-else class="day-sidebar__day-stats day-sidebar__day-stats--empty">
 								{{ t('calorietracker', 'No entries') }}
@@ -101,12 +103,14 @@ import NcAppNavigationItem from '@nextcloud/vue/components/NcAppNavigationItem'
 import NcButton from '@nextcloud/vue/components/NcButton'
 import { useFoodEntriesStore } from '../stores/foodEntries.js'
 import { useSettingsStore } from '../stores/settings.js'
+import { useUnits } from '../composables/useUnits.js'
 import { toLocalDateString } from '../utils/date.js'
 
 const route = useRoute()
 const router = useRouter()
 const foodEntriesStore = useFoodEntriesStore()
 const settingsStore = useSettingsStore()
+const { displayEnergy, energyLabel } = useUnits()
 const { currentDate, daySummaries } = storeToRefs(foodEntriesStore)
 
 const weeks = computed(() => {
@@ -122,10 +126,7 @@ const weeks = computed(() => {
 				? t('calorietracker', 'Yesterday')
 				: d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })
 
-		const raw = daySummaries.value[date]
-		const summary = raw
-			? { ...raw, totalKj: Math.round(raw.totalKcal * 4.184) }
-			: null
+		const summary = daySummaries.value[date] ?? null
 
 		const dow = (d.getDay() + 6) % 7
 		const monday = new Date(d.getFullYear(), d.getMonth(), d.getDate() - dow)
@@ -153,8 +154,8 @@ const weeks = computed(() => {
 })
 
 /**
- *
- * @param date
+ * Navigate to the selected day.
+ * @param {string} date Date string in YYYY-MM-DD format
  */
 function selectDay(date) {
 	// When already on the day view, use setDate which also fetches entries.
@@ -224,5 +225,11 @@ settingsStore.fetchSettings()
 
 .day-sidebar__day-stats--empty {
 	font-style: italic;
+}
+
+.day-sidebar__settings-container {
+	display: flex;
+	flex-direction: column;
+	padding: calc(2 * var(--default-grid-baseline));
 }
 </style>

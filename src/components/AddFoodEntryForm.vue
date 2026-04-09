@@ -43,7 +43,7 @@
 					@mousedown.prevent="selectResult(result)">
 					<span class="food-entry-form__search-result-name">{{ result.name }}</span>
 					<span class="food-entry-form__search-result-meta">
-						<span class="food-entry-form__search-result-kcal">{{ result.caloriesPer100g }} kcal/100g</span>
+						<span class="food-entry-form__search-result-kcal">{{ displayEnergy(displayPer100g(result.caloriesPer100g)) }} {{ energyLabel }}/{{ isImperial ? 'oz' : '100g' }}</span>
 						<span class="food-entry-form__search-result-source"
 							:class="`food-entry-form__search-result-source--${result.source}`">{{ result.source === 'off' ? 'OFF' : 'USDA' }}</span>
 					</span>
@@ -81,14 +81,14 @@
 			<div class="food-entry-form__fields food-entry-form__fields--two">
 				<NcInputField v-model.number="form.caloriesPer100g"
 					type="number"
-					:label="t('calorietracker', 'kcal per 100g')"
+					:label="t('calorietracker', '{energy} {per}', { energy: energyLabel, per: perWeightLabel })"
 					min="1"
 					required />
 
 				<NcInputField ref="amountField"
 					v-model.number="form.amountGrams"
 					type="number"
-					:label="t('calorietracker', 'Amount (g)')"
+					:label="t('calorietracker', 'Amount ({unit})', { unit: weightLabel })"
 					min="1"
 					required />
 			</div>
@@ -111,27 +111,27 @@
 
 			<!-- Calorie preview -->
 			<div v-if="form.caloriesPer100g > 0 && form.amountGrams > 0" class="food-entry-form__preview">
-				≈ {{ calculatedCalories }} kcal
+				≈ {{ calculatedCalories }} {{ energyLabel }}
 			</div>
 
 			<!-- Macros: 3 columns -->
 			<p class="food-entry-form__section-label">
-				{{ t('calorietracker', 'Macros per 100g (optional)') }}
+				{{ t('calorietracker', 'Macros {per} (optional)', { per: perWeightLabel }) }}
 			</p>
 			<div class="food-entry-form__fields food-entry-form__fields--three">
 				<NcInputField v-model.number="form.proteinPer100g"
 					type="number"
-					:label="t('calorietracker', 'Protein (g)')"
+					:label="t('calorietracker', 'Protein ({unit})', { unit: weightLabel })"
 					min="0" />
 
 				<NcInputField v-model.number="form.carbsPer100g"
 					type="number"
-					:label="t('calorietracker', 'Carbs (g)')"
+					:label="t('calorietracker', 'Carbs ({unit})', { unit: weightLabel })"
 					min="0" />
 
 				<NcInputField v-model.number="form.fatPer100g"
 					type="number"
-					:label="t('calorietracker', 'Fat (g)')"
+					:label="t('calorietracker', 'Fat ({unit})', { unit: weightLabel })"
 					min="0" />
 			</div>
 		</template>
@@ -160,11 +160,13 @@ import NcSelect from '@nextcloud/vue/components/NcSelect'
 import NcDateTimePickerNative from '@nextcloud/vue/components/NcDateTimePickerNative'
 import { useFoodEntriesStore } from '../stores/foodEntries.js'
 import { toLocalDateString } from '../utils/date.js'
+import { useUnits } from '../composables/useUnits.js'
 import offApi from '../services/OpenFoodFactsApi.js'
 import usdaApi from '../services/UsdaFdcApi.js'
 
 const store = useFoodEntriesStore()
 const { currentDate, editingEntry } = storeToRefs(store)
+const { energyLabel, weightLabel, perWeightLabel, displayWeight, toGrams, displayPer100g, toPer100g, displayEnergy, toKcal, isImperial } = useUnits()
 
 // Template ref
 const amountField = ref(null)
@@ -201,19 +203,19 @@ function defaultForm() {
 }
 
 /**
- *
- * @param entry
+ * Convert a stored entry (metric) to form values (user's preferred units).
+ * @param {object} entry Stored food entry in metric units
  */
 function entryToForm(entry) {
 	return {
 		foodName: entry.foodName,
-		caloriesPer100g: entry.caloriesPer100g ?? '',
-		amountGrams: entry.amountGrams ?? '',
+		caloriesPer100g: entry.caloriesPer100g != null ? displayEnergy(displayPer100g(entry.caloriesPer100g)) : '',
+		amountGrams: entry.amountGrams != null ? displayWeight(entry.amountGrams) : '',
 		mealType: entry.mealType,
 		eatenAt: entry.eatenAt,
-		proteinPer100g: entry.proteinPer100g ?? '',
-		carbsPer100g: entry.carbsPer100g ?? '',
-		fatPer100g: entry.fatPer100g ?? '',
+		proteinPer100g: entry.proteinPer100g != null ? displayPer100g(entry.proteinPer100g) : '',
+		carbsPer100g: entry.carbsPer100g != null ? displayPer100g(entry.carbsPer100g) : '',
+		fatPer100g: entry.fatPer100g != null ? displayPer100g(entry.fatPer100g) : '',
 	}
 }
 
@@ -224,7 +226,13 @@ watch(editingEntry, (entry) => {
 	showManual.value = false
 }, { immediate: true })
 
-const calculatedCalories = computed(() => Math.round(form.caloriesPer100g * form.amountGrams / 100))
+const calculatedCalories = computed(() => {
+	// Form values are in display units; convert to metric for the preview
+	const kcalPer100g = toPer100g(toKcal(form.caloriesPer100g))
+	const grams = toGrams(form.amountGrams)
+	const kcal = Math.round(kcalPer100g * grams / 100)
+	return displayEnergy(kcal)
+})
 
 const mealTypeOptions = computed(() => [
 	{ value: 'breakfast', label: t('calorietracker', 'Breakfast') },
@@ -297,15 +305,15 @@ async function runSearch() {
 }
 
 /**
- *
- * @param result
+ * Populate form fields from a search result.
+ * @param {object} result Food search result
  */
 function selectResult(result) {
 	form.foodName = result.name
-	form.caloriesPer100g = result.caloriesPer100g
-	form.proteinPer100g = result.proteinPer100g ?? ''
-	form.carbsPer100g = result.carbsPer100g ?? ''
-	form.fatPer100g = result.fatPer100g ?? ''
+	form.caloriesPer100g = displayEnergy(displayPer100g(result.caloriesPer100g))
+	form.proteinPer100g = result.proteinPer100g != null ? displayPer100g(result.proteinPer100g) : ''
+	form.carbsPer100g = result.carbsPer100g != null ? displayPer100g(result.carbsPer100g) : ''
+	form.fatPer100g = result.fatPer100g != null ? displayPer100g(result.fatPer100g) : ''
 	selectedSource.value = result.source ?? null
 	selectedExternalId.value = result.externalId ?? null
 	showManual.value = true
@@ -365,11 +373,11 @@ function toPayload() {
 	const nullIfEmpty = (v) => v === '' ? null : v
 	return {
 		...form,
-		caloriesPer100g: Number(form.caloriesPer100g),
-		amountGrams: Number(form.amountGrams),
-		proteinPer100g: nullIfEmpty(form.proteinPer100g) !== null ? Number(form.proteinPer100g) : null,
-		carbsPer100g: nullIfEmpty(form.carbsPer100g) !== null ? Number(form.carbsPer100g) : null,
-		fatPer100g: nullIfEmpty(form.fatPer100g) !== null ? Number(form.fatPer100g) : null,
+		caloriesPer100g: toPer100g(toKcal(Number(form.caloriesPer100g))),
+		amountGrams: toGrams(Number(form.amountGrams)),
+		proteinPer100g: nullIfEmpty(form.proteinPer100g) !== null ? toPer100g(Number(form.proteinPer100g)) : null,
+		carbsPer100g: nullIfEmpty(form.carbsPer100g) !== null ? toPer100g(Number(form.carbsPer100g)) : null,
+		fatPer100g: nullIfEmpty(form.fatPer100g) !== null ? toPer100g(Number(form.fatPer100g)) : null,
 	}
 }
 

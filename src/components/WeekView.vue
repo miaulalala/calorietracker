@@ -17,16 +17,16 @@
 							{{ t('calorietracker', 'Day') }}
 						</th>
 						<th class="week-view__col-num" scope="col">
-							{{ t('calorietracker', 'Calories (kcal)') }}
+							{{ t('calorietracker', 'Calories ({unit})', { unit: energyLabel }) }}
 						</th>
 						<th class="week-view__col-num" scope="col">
-							{{ t('calorietracker', 'Protein (g)') }}
+							{{ t('calorietracker', 'Protein ({unit})', { unit: macroWeightUnit }) }}
 						</th>
 						<th class="week-view__col-num" scope="col">
-							{{ t('calorietracker', 'Carbs (g)') }}
+							{{ t('calorietracker', 'Carbs ({unit})', { unit: macroWeightUnit }) }}
 						</th>
 						<th class="week-view__col-num" scope="col">
-							{{ t('calorietracker', 'Fat (g)') }}
+							{{ t('calorietracker', 'Fat ({unit})', { unit: macroWeightUnit }) }}
 						</th>
 						<th class="week-view__col-num" scope="col">
 							{{ t('calorietracker', 'Items') }}
@@ -52,16 +52,16 @@
 							<span class="week-view__day-date">{{ day.shortDate }}</span>
 						</td>
 						<td class="week-view__col-num">
-							{{ day.summary ? day.summary.totalKcal : '—' }}
+							{{ day.summary ? displayEnergy(day.summary.totalKcal) : '—' }}
 						</td>
 						<td class="week-view__col-num">
-							{{ day.summary ? day.summary.totalProteinG : '—' }}
+							{{ day.summary ? displayMacroWeight(day.summary.totalProteinG) : '—' }}
 						</td>
 						<td class="week-view__col-num">
-							{{ day.summary ? day.summary.totalCarbsG : '—' }}
+							{{ day.summary ? displayMacroWeight(day.summary.totalCarbsG) : '—' }}
 						</td>
 						<td class="week-view__col-num">
-							{{ day.summary ? day.summary.totalFatG : '—' }}
+							{{ day.summary ? displayMacroWeight(day.summary.totalFatG) : '—' }}
 						</td>
 						<td class="week-view__col-num">
 							{{ day.summary ? day.summary.itemCount : '—' }}
@@ -72,16 +72,16 @@
 					<tr class="week-view__total-row">
 						<td>{{ t('calorietracker', 'Total') }}</td>
 						<td class="week-view__col-num">
-							{{ totals.kcal }}
+							{{ displayEnergy(totals.kcal) }}
 						</td>
 						<td class="week-view__col-num">
-							{{ totals.protein }}
+							{{ displayMacroWeight(totals.protein) }}
 						</td>
 						<td class="week-view__col-num">
-							{{ totals.carbs }}
+							{{ displayMacroWeight(totals.carbs) }}
 						</td>
 						<td class="week-view__col-num">
-							{{ totals.fat }}
+							{{ displayMacroWeight(totals.fat) }}
 						</td>
 						<td class="week-view__col-num">
 							{{ totals.items }}
@@ -90,16 +90,16 @@
 					<tr v-if="activeDays > 0" class="week-view__avg-row">
 						<td>{{ n('calorietracker', 'Avg ({n} day)', 'Avg ({n} days)', activeDays, { n: activeDays }) }}</td>
 						<td class="week-view__col-num">
-							{{ averages.kcal }}
+							{{ displayEnergy(averages.kcal) }}
 						</td>
 						<td class="week-view__col-num">
-							{{ averages.protein }}
+							{{ displayMacroWeight(averages.protein) }}
 						</td>
 						<td class="week-view__col-num">
-							{{ averages.carbs }}
+							{{ displayMacroWeight(averages.carbs) }}
 						</td>
 						<td class="week-view__col-num">
-							{{ averages.fat }}
+							{{ displayMacroWeight(averages.fat) }}
 						</td>
 						<td class="week-view__col-num">
 							{{ averages.items }}
@@ -117,12 +117,23 @@ import { useRoute, useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { translate as t, translatePlural as n } from '@nextcloud/l10n'
 import { useFoodEntriesStore } from '../stores/foodEntries.js'
+import { useUnits } from '../composables/useUnits.js'
 import { toLocalDateString } from '../utils/date.js'
 
 const route = useRoute()
 const router = useRouter()
 const foodEntriesStore = useFoodEntriesStore()
 const { daySummaries } = storeToRefs(foodEntriesStore)
+const { displayEnergy, displayWeight, energyLabel, weightLabel } = useUnits()
+const macroWeightUnit = weightLabel
+
+/**
+ * Display a macro weight value in the user's preferred unit.
+ * @param {number} grams Weight in grams
+ */
+function displayMacroWeight(grams) {
+	return displayWeight(grams)
+}
 
 // Validate the weekStart route param before use — a malformed URL like
 // /week/2026-99-99 would otherwise cause toLocaleDateString to throw "Invalid time value".
@@ -203,11 +214,20 @@ const averages = computed(() => {
 
 // Set currentDate without calling setDate() — DayView fetches entries on its
 // own mount, so calling setDate() here would trigger a duplicate request.
+/**
+ * Navigate to the day view for a given date.
+ * @param {string} date Date string in YYYY-MM-DD format
+ */
 function goToDay(date) {
 	foodEntriesStore.currentDate = date
 	router.push('/')
 }
 
+/**
+ * Fetch summary data for the currently displayed week.
+ * Uses the explicit week date range so summaries are available even
+ * when that week falls outside the store's default summary window.
+ */
 function fetchWeekSummaries() {
 	const weekDays = days.value
 	if (weekDays.length > 0) {
