@@ -42,7 +42,11 @@
 					:aria-selected="i === highlightedIndex"
 					@mousedown.prevent="selectResult(result)">
 					<span class="food-entry-form__search-result-name">{{ result.name }}</span>
-					<span class="food-entry-form__search-result-kcal">{{ result.caloriesPer100g }} kcal/100g</span>
+					<span class="food-entry-form__search-result-meta">
+						<span class="food-entry-form__search-result-kcal">{{ result.caloriesPer100g }} kcal/100g</span>
+						<span class="food-entry-form__search-result-source"
+							:class="`food-entry-form__search-result-source--${result.source}`">{{ result.source === 'off' ? 'OFF' : 'USDA' }}</span>
+					</span>
 				</li>
 			</ul>
 			<div v-else-if="searchError" class="food-entry-form__search-feedback">
@@ -157,6 +161,7 @@ import NcDateTimePickerNative from '@nextcloud/vue/components/NcDateTimePickerNa
 import { useFoodEntriesStore } from '../stores/foodEntries.js'
 import { toLocalDateString } from '../utils/date.js'
 import offApi from '../services/OpenFoodFactsApi.js'
+import usdaApi from '../services/UsdaFdcApi.js'
 
 const store = useFoodEntriesStore()
 const { currentDate, editingEntry } = storeToRefs(store)
@@ -270,11 +275,22 @@ async function runSearch() {
 	searchDone.value = false
 	searchError.value = false
 	try {
-		searchResults.value = await offApi.search(searchQuery.value)
+		const [usdaRes, offRes] = await Promise.allSettled([
+			usdaApi.search(searchQuery.value),
+			offApi.search(searchQuery.value),
+		])
+		if (usdaRes.status === 'rejected') {
+			console.error('USDA search failed:', usdaRes.reason)
+		}
+		if (offRes.status === 'rejected') {
+			console.error('OFF search failed:', offRes.reason)
+		}
+		searchResults.value = [
+			...(usdaRes.status === 'fulfilled' ? usdaRes.value : []),
+			...(offRes.status === 'fulfilled' ? offRes.value : []),
+		]
+		searchError.value = usdaRes.status === 'rejected' && offRes.status === 'rejected'
 		searchDone.value = true
-	} catch (e) {
-		searchResults.value = []
-		searchError.value = true
 	} finally {
 		searchLoading.value = false
 	}
@@ -501,10 +517,35 @@ async function submit() {
 	white-space: nowrap;
 }
 
+.food-entry-form__search-result-meta {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	flex-shrink: 0;
+}
+
 .food-entry-form__search-result-kcal {
 	font-size: 0.85em;
 	color: var(--color-text-maxcontrast);
 	white-space: nowrap;
+}
+
+.food-entry-form__search-result-source {
+	font-size: 0.75em;
+	font-weight: 600;
+	padding: 1px 5px;
+	border-radius: var(--border-radius);
+	white-space: nowrap;
+}
+
+.food-entry-form__search-result-source--usda_fdc {
+	background: color-mix(in srgb, var(--color-primary-element) 15%, transparent);
+	color: var(--color-primary-element-text, var(--color-primary-text));
+}
+
+.food-entry-form__search-result-source--off {
+	background: color-mix(in srgb, var(--color-success) 15%, transparent);
+	color: var(--color-success-text, var(--color-text-maxcontrast));
 }
 
 .food-entry-form__search-feedback {
