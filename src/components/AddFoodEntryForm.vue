@@ -6,216 +6,215 @@
 <template>
 	<form class="food-entry-form" @submit.prevent="submit">
 		<div class="food-entry-form__scroll">
-		<h2 class="food-entry-form__title">
-			{{ editingEntry ? t('calorietracker', 'Edit entry') : t('calorietracker', 'Add food') }}
-		</h2>
+			<h2 class="food-entry-form__title">
+				{{ editingEntry ? t('calorietracker', 'Edit entry') : t('calorietracker', 'Add food') }}
+			</h2>
 
-		<!-- Search — hidden in edit mode -->
-		<div v-if="!editingEntry && !showManual" class="food-entry-form__search">
-			<div class="food-entry-form__search-input-row">
-				<NcInputField v-model="searchQuery"
-					type="search"
-					:label="t('calorietracker', 'Search food database')"
-					:placeholder="t('calorietracker', 'e.g. Oatmeal, Banana, Chicken breast…')"
-					role="combobox"
-					:aria-expanded="searchResults.length > 0"
-					aria-autocomplete="list"
-					aria-controls="food-search-results"
-					autocomplete="off"
-					:loading="searchLoading"
-					@input="onSearchInput"
-					@keydown.down.prevent="highlightNext"
-					@keydown.up.prevent="highlightPrev"
-					@keydown.enter.prevent="selectHighlighted"
-					@keydown.esc="closeSearch"
-					@blur="onSearchBlur" />
-			</div>
-			<ul v-if="searchResults.length > 0"
-				id="food-search-results"
-				class="food-entry-form__search-results"
-				role="listbox"
-				:aria-label="t('calorietracker', 'Search results')">
-				<li v-for="(result, i) in searchResults"
-					:key="i"
-					class="food-entry-form__search-result"
-					:class="{ 'food-entry-form__search-result--active': i === highlightedIndex }"
-					role="option"
-					:aria-selected="i === highlightedIndex"
-					@mousedown.prevent="selectResult(result)">
-					<div class="food-entry-form__search-result-top">
-						<span class="food-entry-form__search-result-name">{{ result.name }}</span>
-						<span class="food-entry-form__search-result-source"
-							:class="`food-entry-form__search-result-source--${result.source}`">{{ result.source === 'off' ? 'OFF' : 'USDA' }}</span>
-					</div>
-					<div class="food-entry-form__search-result-bottom">
-						<span class="food-entry-form__search-result-kcal">{{ displayEnergy(displayPer100g(result.caloriesPer100g)) }} {{ energyLabel }}/{{ isImperial ? 'oz' : '100g' }}</span>
-						<span v-if="result.proteinPer100g != null" class="food-entry-form__search-result-macro">P {{ displayPer100g(result.proteinPer100g) }}{{ weightLabel }}</span>
-						<span v-if="result.carbsPer100g != null" class="food-entry-form__search-result-macro">C {{ displayPer100g(result.carbsPer100g) }}{{ weightLabel }}</span>
-						<span v-if="result.fatPer100g != null" class="food-entry-form__search-result-macro">F {{ displayPer100g(result.fatPer100g) }}{{ weightLabel }}</span>
-					</div>
-				</li>
-			</ul>
-			<p v-if="searchWarning" class="food-entry-form__search-warning">
-				{{ searchWarning }}
-			</p>
-			<div v-else-if="searchError" class="food-entry-form__search-feedback">
-				<p class="food-entry-form__search-empty food-entry-form__search-empty--error">
-					{{ t('calorietracker', 'Could not reach food database.') }}
+			<!-- Search — hidden in edit mode -->
+			<div v-if="!editingEntry && !showManual" class="food-entry-form__search">
+				<div class="food-entry-form__search-input-row">
+					<NcInputField v-model="searchQuery"
+						type="search"
+						:label="t('calorietracker', 'Search food database')"
+						:placeholder="t('calorietracker', 'e.g. Oatmeal, Banana, Chicken breast…')"
+						role="combobox"
+						:aria-expanded="searchResults.length > 0"
+						aria-autocomplete="list"
+						aria-controls="food-search-results"
+						autocomplete="off"
+						:loading="searchLoading"
+						@input="onSearchInput"
+						@keydown.down.prevent="highlightNext"
+						@keydown.up.prevent="highlightPrev"
+						@keydown.enter.prevent="selectHighlighted"
+						@keydown.esc="closeSearch"
+						@blur="onSearchBlur" />
+				</div>
+				<ul v-if="searchResults.length > 0"
+					id="food-search-results"
+					class="food-entry-form__search-results"
+					role="listbox"
+					:aria-label="t('calorietracker', 'Search results')">
+					<li v-for="(result, i) in searchResults"
+						:key="i"
+						class="food-entry-form__search-result"
+						:class="{ 'food-entry-form__search-result--active': i === highlightedIndex }"
+						role="option"
+						:aria-selected="i === highlightedIndex"
+						@mousedown.prevent="selectResult(result)">
+						<div class="food-entry-form__search-result-top">
+							<span class="food-entry-form__search-result-name">{{ result.name }}</span>
+							<span class="food-entry-form__search-result-source"
+								:class="`food-entry-form__search-result-source--${result.source}`">{{ result.source === 'off' ? 'OFF' : 'USDA' }}</span>
+						</div>
+						<div class="food-entry-form__search-result-bottom">
+							<span class="food-entry-form__search-result-kcal">{{ displayEnergy(displayPer100g(result.caloriesPer100g)) }} {{ energyLabel }}/{{ isImperial ? 'oz' : '100g' }}</span>
+							<span v-if="result.proteinPer100g != null" class="food-entry-form__search-result-macro">P {{ displayPer100g(result.proteinPer100g) }}{{ weightLabel }}</span>
+							<span v-if="result.carbsPer100g != null" class="food-entry-form__search-result-macro">C {{ displayPer100g(result.carbsPer100g) }}{{ weightLabel }}</span>
+							<span v-if="result.fatPer100g != null" class="food-entry-form__search-result-macro">F {{ displayPer100g(result.fatPer100g) }}{{ weightLabel }}</span>
+						</div>
+					</li>
+				</ul>
+				<p v-if="searchWarning" class="food-entry-form__search-warning">
+					{{ searchWarning }}
 				</p>
+				<div v-else-if="searchError" class="food-entry-form__search-feedback">
+					<p class="food-entry-form__search-empty food-entry-form__search-empty--error">
+						{{ t('calorietracker', 'Could not reach food database.') }}
+					</p>
+				</div>
+				<div v-else-if="searchDone && searchQuery.length >= 2" class="food-entry-form__search-feedback">
+					<p class="food-entry-form__search-empty">
+						{{ t('calorietracker', 'No results found.') }}
+					</p>
+				</div>
 			</div>
-			<div v-else-if="searchDone && searchQuery.length >= 2" class="food-entry-form__search-feedback">
-				<p class="food-entry-form__search-empty">
-					{{ t('calorietracker', 'No results found.') }}
+
+			<!-- Just-added entries — shown in add mode after submitting -->
+			<div v-if="!editingEntry && !showManual && addedEntries.length > 0" class="food-entry-form__added">
+				<p class="food-entry-form__section-label">
+					{{ t('calorietracker', 'Added') }}
 				</p>
-			</div>
-		</div>
-
-		<!-- Just-added entries — shown in add mode after submitting -->
-		<div v-if="!editingEntry && !showManual && addedEntries.length > 0" class="food-entry-form__added">
-			<p class="food-entry-form__section-label">
-				{{ t('calorietracker', 'Added') }}
-			</p>
-			<NcFormBox>
-				<NcFormBoxButton v-for="entry in addedEntries"
-					:key="entry.id"
-					:label="entry.foodName"
-					@click="editAddedEntry(entry)">
-					<template #description>
-						<span class="food-entry-form__details">
-							<span class="food-entry-form__detail">{{ displayWeight(entry.amountGrams) }}{{ weightLabel }}</span>
-							<span class="food-entry-form__detail food-entry-form__detail--energy">{{ displayEnergy(Math.round(entry.caloriesPer100g * entry.amountGrams / 100)) }} {{ energyLabel }}</span>
-							<span v-if="entry.proteinPer100g != null" class="food-entry-form__detail food-entry-form__detail--macro">P {{ entryMacroGrams(entry.proteinPer100g, entry.amountGrams) }}{{ weightLabel }}</span>
-							<span v-if="entry.carbsPer100g != null" class="food-entry-form__detail food-entry-form__detail--macro">C {{ entryMacroGrams(entry.carbsPer100g, entry.amountGrams) }}{{ weightLabel }}</span>
-							<span v-if="entry.fatPer100g != null" class="food-entry-form__detail food-entry-form__detail--macro">F {{ entryMacroGrams(entry.fatPer100g, entry.amountGrams) }}{{ weightLabel }}</span>
-						</span>
-					</template>
-					<template #icon>
-						<NcButton variant="tertiary"
-							:aria-label="t('calorietracker', 'Edit')"
-							@click.stop="editAddedEntry(entry)">
-							<template #icon>
-								<NcIconSvgWrapper :svg="iconPencil" />
-							</template>
-						</NcButton>
-						<NcButton variant="tertiary"
-							:aria-label="t('calorietracker', 'Delete')"
-							@click.stop="deleteAddedEntry(entry)">
-							<template #icon>
-								<NcIconSvgWrapper :svg="iconTrash" />
-							</template>
-						</NcButton>
-					</template>
-				</NcFormBoxButton>
-			</NcFormBox>
-		</div>
-
-		<!-- Frequently used foods — shown below search in add mode -->
-		<div v-if="!editingEntry && !showManual && frequentFoods.length > 0" class="food-entry-form__frequent">
-			<p class="food-entry-form__section-label">
-				{{ t('calorietracker', 'Frequently used') }}
-			</p>
-			<div class="food-entry-form__frequent-list">
-				<button v-for="food in frequentFoods"
-					:key="food.id"
-					type="button"
-					class="food-entry-form__frequent-chip"
-					@click="selectResult(food)">
-					<span class="food-entry-form__frequent-name">{{ food.name }}</span>
-					<span class="food-entry-form__frequent-kcal">{{ displayEnergy(displayPer100g(food.caloriesPer100g)) }} {{ energyLabel }}</span>
-				</button>
-			</div>
-		</div>
-
-		<!-- Manual fields — shown after selecting a result, clicking "Add manually", or in edit mode -->
-		<template v-if="showManual || editingEntry || editingAddedEntry">
-			<!-- Food name: full width -->
-			<div class="food-entry-form__fields food-entry-form__fields--single">
-				<NcInputField v-model="form.foodName"
-					type="text"
-					:label="t('calorietracker', 'Food name')"
-					:placeholder="t('calorietracker', 'e.g. Oatmeal')"
-					required />
+				<NcFormBox>
+					<NcFormBoxButton v-for="entry in addedEntries"
+						:key="entry.id"
+						:label="entry.foodName"
+						@click="editAddedEntry(entry)">
+						<template #description>
+							<span class="food-entry-form__details">
+								<span class="food-entry-form__detail">{{ displayWeight(entry.amountGrams) }}{{ weightLabel }}</span>
+								<span class="food-entry-form__detail food-entry-form__detail--energy">{{ displayEnergy(Math.round(entry.caloriesPer100g * entry.amountGrams / 100)) }} {{ energyLabel }}</span>
+								<span v-if="entry.proteinPer100g != null" class="food-entry-form__detail food-entry-form__detail--macro">P {{ entryMacroGrams(entry.proteinPer100g, entry.amountGrams) }}{{ weightLabel }}</span>
+								<span v-if="entry.carbsPer100g != null" class="food-entry-form__detail food-entry-form__detail--macro">C {{ entryMacroGrams(entry.carbsPer100g, entry.amountGrams) }}{{ weightLabel }}</span>
+								<span v-if="entry.fatPer100g != null" class="food-entry-form__detail food-entry-form__detail--macro">F {{ entryMacroGrams(entry.fatPer100g, entry.amountGrams) }}{{ weightLabel }}</span>
+							</span>
+						</template>
+						<template #icon>
+							<NcButton variant="tertiary"
+								:aria-label="t('calorietracker', 'Edit')"
+								@click.stop="editAddedEntry(entry)">
+								<template #icon>
+									<NcIconSvgWrapper :svg="iconPencil" />
+								</template>
+							</NcButton>
+							<NcButton variant="tertiary"
+								:aria-label="t('calorietracker', 'Delete')"
+								@click.stop="deleteAddedEntry(entry)">
+								<template #icon>
+									<NcIconSvgWrapper :svg="iconTrash" />
+								</template>
+							</NcButton>
+						</template>
+					</NcFormBoxButton>
+				</NcFormBox>
 			</div>
 
-			<!-- kcal -->
-			<div class="food-entry-form__fields food-entry-form__fields--single">
-				<NcInputField v-model.number="form.caloriesPer100g"
-					type="number"
-					:label="t('calorietracker', '{energy} {per}', { energy: energyLabel, per: perWeightLabel })"
-					min="1"
-					required />
+			<!-- Frequently used foods — shown below search in add mode -->
+			<div v-if="!editingEntry && !showManual && frequentFoods.length > 0" class="food-entry-form__frequent">
+				<p class="food-entry-form__section-label">
+					{{ t('calorietracker', 'Frequently used') }}
+				</p>
+				<div class="food-entry-form__frequent-list">
+					<button v-for="food in frequentFoods"
+						:key="food.id"
+						type="button"
+						class="food-entry-form__frequent-chip"
+						@click="selectResult(food)">
+						<span class="food-entry-form__frequent-name">{{ food.name }}</span>
+						<span class="food-entry-form__frequent-kcal">{{ displayEnergy(displayPer100g(food.caloriesPer100g)) }} {{ energyLabel }}</span>
+					</button>
+				</div>
 			</div>
 
-			<!-- Amount + unit side by side -->
-			<div class="food-entry-form__fields food-entry-form__fields--two">
-				<div class="food-entry-form__field-wrap">
-					<label for="food-entry-amount" class="food-entry-form__select-label">{{ t('calorietracker', 'Amount') }}</label>
-					<NcInputField ref="amountField"
-						v-model.number="form.amount"
-						input-id="food-entry-amount"
+			<!-- Manual fields — shown after selecting a result, clicking "Add manually", or in edit mode -->
+			<template v-if="showManual || editingEntry || editingAddedEntry">
+				<!-- Food name: full width -->
+				<div class="food-entry-form__fields food-entry-form__fields--single">
+					<NcInputField v-model="form.foodName"
+						type="text"
+						:label="t('calorietracker', 'Food name')"
+						:placeholder="t('calorietracker', 'e.g. Oatmeal')"
+						required />
+				</div>
+
+				<!-- kcal -->
+				<div class="food-entry-form__fields food-entry-form__fields--single">
+					<NcInputField v-model.number="form.caloriesPer100g"
 						type="number"
+						:label="t('calorietracker', '{energy} {per}', { energy: energyLabel, per: perWeightLabel })"
 						min="1"
 						required />
 				</div>
 
-				<div class="food-entry-form__field-wrap">
-					<label for="food-entry-unit" class="food-entry-form__select-label">{{ t('calorietracker', 'Unit') }}</label>
-					<NcSelect v-model="selectedUnit"
-						input-id="food-entry-unit"
-						:options="unitOptions"
-						:clearable="false"
-						label="label" />
+				<!-- Amount + unit side by side -->
+				<div class="food-entry-form__fields food-entry-form__fields--two">
+					<div class="food-entry-form__field-wrap">
+						<label for="food-entry-amount" class="food-entry-form__select-label">{{ t('calorietracker', 'Amount') }}</label>
+						<NcInputField ref="amountField"
+							v-model.number="form.amount"
+							input-id="food-entry-amount"
+							type="number"
+							min="1"
+							required />
+					</div>
+
+					<div class="food-entry-form__field-wrap">
+						<label for="food-entry-unit" class="food-entry-form__select-label">{{ t('calorietracker', 'Unit') }}</label>
+						<NcSelect v-model="selectedUnit"
+							input-id="food-entry-unit"
+							:options="unitOptions"
+							:clearable="false"
+							label="label" />
+					</div>
 				</div>
-			</div>
 
-			<!-- Meal + date side by side -->
-			<div class="food-entry-form__fields food-entry-form__fields--two">
-				<div class="food-entry-form__field-wrap">
-					<label for="food-entry-meal" class="food-entry-form__select-label">{{ t('calorietracker', 'Meal') }}</label>
-					<NcSelect v-model="mealTypeOption"
-						input-id="food-entry-meal"
-						:options="mealTypeOptions"
-						:clearable="false"
-						label="label" />
+				<!-- Meal + date side by side -->
+				<div class="food-entry-form__fields food-entry-form__fields--two">
+					<div class="food-entry-form__field-wrap">
+						<label for="food-entry-meal" class="food-entry-form__select-label">{{ t('calorietracker', 'Meal') }}</label>
+						<NcSelect v-model="mealTypeOption"
+							input-id="food-entry-meal"
+							:options="mealTypeOptions"
+							:clearable="false"
+							label="label" />
+					</div>
+
+					<div class="food-entry-form__field-wrap">
+						<label for="food-entry-date" class="food-entry-form__select-label">{{ t('calorietracker', 'Date') }}</label>
+						<NcDateTimePickerNative id="food-entry-date"
+							v-model="eatenAtDate"
+							type="date"
+							hide-label
+							required />
+					</div>
 				</div>
 
-				<div class="food-entry-form__field-wrap">
-					<label for="food-entry-date" class="food-entry-form__select-label">{{ t('calorietracker', 'Date') }}</label>
-					<NcDateTimePickerNative v-model="eatenAtDate"
-						id="food-entry-date"
-						type="date"
-						hide-label
-						required />
+				<!-- Calorie preview -->
+				<div class="food-entry-form__preview">
+					≈ {{ form.caloriesPer100g > 0 && form.amount > 0 ? calculatedCalories : 0 }} {{ energyLabel }}
 				</div>
-			</div>
 
-			<!-- Calorie preview -->
-			<div class="food-entry-form__preview">
-				≈ {{ form.caloriesPer100g > 0 && form.amount > 0 ? calculatedCalories : 0 }} {{ energyLabel }}
-			</div>
+				<!-- Macros: 3 columns -->
+				<p class="food-entry-form__section-label">
+					{{ t('calorietracker', 'Macros {per} (optional)', { per: perWeightLabel }) }}
+				</p>
+				<div class="food-entry-form__fields food-entry-form__fields--three">
+					<NcInputField v-model.number="form.proteinPer100g"
+						type="number"
+						:label="t('calorietracker', 'Protein ({unit})', { unit: weightLabel })"
+						min="0" />
 
-			<!-- Macros: 3 columns -->
-			<p class="food-entry-form__section-label">
-				{{ t('calorietracker', 'Macros {per} (optional)', { per: perWeightLabel }) }}
-			</p>
-			<div class="food-entry-form__fields food-entry-form__fields--three">
-				<NcInputField v-model.number="form.proteinPer100g"
-					type="number"
-					:label="t('calorietracker', 'Protein ({unit})', { unit: weightLabel })"
-					min="0" />
+					<NcInputField v-model.number="form.carbsPer100g"
+						type="number"
+						:label="t('calorietracker', 'Carbs ({unit})', { unit: weightLabel })"
+						min="0" />
 
-				<NcInputField v-model.number="form.carbsPer100g"
-					type="number"
-					:label="t('calorietracker', 'Carbs ({unit})', { unit: weightLabel })"
-					min="0" />
-
-				<NcInputField v-model.number="form.fatPer100g"
-					type="number"
-					:label="t('calorietracker', 'Fat ({unit})', { unit: weightLabel })"
-					min="0" />
-			</div>
-		</template>
-
+					<NcInputField v-model.number="form.fatPer100g"
+						type="number"
+						:label="t('calorietracker', 'Fat ({unit})', { unit: weightLabel })"
+						min="0" />
+				</div>
+			</template>
 		</div>
 		<div class="food-entry-form__actions">
 			<NcButton variant="secondary"
@@ -644,7 +643,6 @@ async function submit() {
 	}
 }
 
-
 /**
  * Edit a previously added entry: populate the form and switch to manual mode.
  * @param {object} entry The added entry to edit
@@ -712,7 +710,6 @@ async function deleteAddedEntry(entry) {
 .food-entry-form__fields--three {
 	grid-template-columns: 1fr 1fr 1fr;
 }
-
 
 .food-entry-form__field-wrap {
 	display: flex;

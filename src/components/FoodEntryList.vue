@@ -164,7 +164,6 @@ function mealLabel(type) {
 	return labels[type] ?? type
 }
 
-
 /**
  * Calculate total energy for a list of entries.
  * @param {Array} entries List of food entries
