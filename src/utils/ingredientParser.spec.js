@@ -129,7 +129,7 @@ describe('estimateRecipeNutrition', () => {
 
 		await expect(
 			estimateRecipeNutrition(['unknown thing'], '1'),
-		).rejects.toThrow('No ingredients could be matched')
+		).rejects.toThrow('No ingredients could be matched in the food database')
 	})
 
 	test('throws when batch search fails', async () => {
@@ -137,6 +137,6 @@ describe('estimateRecipeNutrition', () => {
 
 		await expect(
 			estimateRecipeNutrition(['chicken'], '1'),
-		).rejects.toThrow('No ingredients could be matched')
+		).rejects.toThrow('No ingredients could be matched in the food database')
 	})
 })
