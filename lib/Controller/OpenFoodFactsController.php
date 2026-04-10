@@ -19,6 +19,7 @@ use OCP\ICache;
 use OCP\ICacheFactory;
 use OCP\IConfig;
 use OCP\IRequest;
+use OCP\L10N\IFactory as IL10NFactory;
 use Psr\Log\LoggerInterface;
 
 /**
@@ -60,6 +61,7 @@ class OpenFoodFactsController extends Controller {
 		private IClientService $clientService,
 		private IConfig $config,
 		private LoggerInterface $logger,
+		private IL10NFactory $l10nFactory,
 		ICacheFactory $cacheFactory,
 	) {
 		parent::__construct('calorietracker', $request);
@@ -170,12 +172,18 @@ class OpenFoodFactsController extends Controller {
 			return new JSONResponse([]);
 		}
 
-		$searchKey = 'offsearch:' . md5(strtolower($query));
+		// Get the user's language code (e.g. "de", "fr", "en")
+		$lang = substr($this->l10nFactory->getUserLanguage(), 0, 2);
+
+		$searchKey = 'offsearch:' . $lang . ':' . md5(strtolower($query));
 
 		$cached = $this->cache->get($searchKey);
 		if ($cached !== null) {
 			return new JSONResponse($cached);
 		}
+
+		// Request localised product name fields: user language, English, and generic
+		$nameFields = array_unique(['product_name_' . $lang, 'product_name_en', 'product_name']);
 
 		try {
 			$client = $this->clientService->newClient();
@@ -185,7 +193,7 @@ class OpenFoodFactsController extends Controller {
 					'action'       => 'process',
 					'json'         => '1',
 					'page_size'    => '20',
-					'fields'       => 'code,product_name,product_name_en,nutriments',
+					'fields'       => implode(',', array_merge(['code', 'nutriments', 'serving_quantity', 'serving_size'], $nameFields)),
 				],
 				'headers' => ['User-Agent' => self::USER_AGENT],
 				'timeout' => 15,
@@ -203,8 +211,16 @@ class OpenFoodFactsController extends Controller {
 				if (!is_array($product)) {
 					continue;
 				}
-				// Prefer the English name; fall back to the localised product_name
-				$name = trim($product['product_name_en'] ?? $product['product_name'] ?? '');
+				// Prefer the user's language, then English, then the generic product_name.
+				// Use a loop because ?? only skips null, not empty strings.
+				$name = '';
+				foreach (['product_name_' . $lang, 'product_name_en', 'product_name'] as $field) {
+					$candidate = trim($product[$field] ?? '');
+					if ($candidate !== '') {
+						$name = $candidate;
+						break;
+					}
+				}
 				if ($name === '') {
 					continue;
 				}
@@ -217,7 +233,7 @@ class OpenFoodFactsController extends Controller {
 					continue;
 				}
 
-				$results[] = [
+				$result = [
 					'source'          => 'off',
 					'externalId'      => isset($product['code']) && $product['code'] !== '' ? (string) $product['code'] : null,
 					'name'            => $name,
@@ -229,6 +245,15 @@ class OpenFoodFactsController extends Controller {
 					'fatPer100g'      => isset($n['fat_100g'])
 						? (int) round((float) $n['fat_100g']) : null,
 				];
+
+				// Include serving size when available (OFF provides serving_quantity in grams)
+				$servingGrams = isset($product['serving_quantity']) ? (float) $product['serving_quantity'] : null;
+				if ($servingGrams !== null && $servingGrams > 0) {
+					$result['servingSizeGrams'] = round($servingGrams, 1);
+					$result['servingDescription'] = $product['serving_size'] ?? null;
+				}
+
+				$results[] = $result;
 			}
 
 			$results = array_slice($results, 0, 10);

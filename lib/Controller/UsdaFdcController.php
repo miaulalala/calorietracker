@@ -131,7 +131,7 @@ class UsdaFdcController extends Controller {
 					continue;
 				}
 
-				$results[] = [
+				$result = [
 					'source'          => 'usda_fdc',
 					'externalId'      => isset($food['fdcId']) ? (string) $food['fdcId'] : null,
 					'name'            => $name,
@@ -144,6 +144,18 @@ class UsdaFdcController extends Controller {
 						? (int) round((float) $nutrients[self::NUTRIENT_FAT]) : null,
 					'_order'          => self::DATA_TYPE_ORDER[$food['dataType'] ?? ''] ?? 99,
 				];
+
+				// Include serving size info when available
+				if (isset($food['servingSize']) && is_numeric($food['servingSize'])) {
+					$unit = strtolower(trim($food['servingSizeUnit'] ?? ''));
+					$servingGrams = ($unit === 'g') ? (float) $food['servingSize'] : null;
+					if ($servingGrams !== null && $servingGrams > 0) {
+						$result['servingSizeGrams'] = round($servingGrams, 1);
+						$result['servingDescription'] = $food['householdServingFullText'] ?? null;
+					}
+				}
+
+				$results[] = $result;
 			}
 
 			// Whole foods (Foundation, SR Legacy) first, branded products last
