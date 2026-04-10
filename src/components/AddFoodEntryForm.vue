@@ -154,7 +154,7 @@
 							v-model.number="form.amount"
 							input-id="food-entry-amount"
 							type="number"
-							:min="selectedUnit?.value === 'g' ? '1' : '0.01'"
+							:min="amountMin"
 							:step="selectedUnit?.value === 'g' ? '1' : 'any'"
 							required />
 					</div>
@@ -367,6 +367,12 @@ async function fetchFrequentFoods() {
 	}
 }
 
+const amountMin = computed(() => {
+	const gpu = selectedUnit.value?.gramsPerUnit ?? 1
+	// Ensure the minimum amount converts to at least 1 gram after rounding
+	return gpu >= 1 ? String(Math.ceil(100 / gpu) / 100) : '1'
+})
+
 const canSubmit = computed(() => {
 	return form.foodName.trim() !== '' && form.caloriesPer100g > 0 && form.amount > 0
 })
@@ -521,7 +527,7 @@ function selectResult(result) {
 	selectedSource.value = result.source ?? null
 	selectedExternalId.value = result.externalId ?? null
 
-	// Build unit options: always include grams, add serving if available
+	// Build unit options: base weight unit + serving if available
 	const options = defaultUnitOptions()
 	if (result.servingSizeGrams && result.servingSizeGrams > 0) {
 		const desc = result.servingDescription
