@@ -154,7 +154,8 @@
 							v-model.number="form.amount"
 							input-id="food-entry-amount"
 							type="number"
-							min="1"
+							min="0.01"
+							step="any"
 							required />
 					</div>
 
@@ -624,6 +625,8 @@ async function submit() {
 			Object.assign(form, defaultForm())
 			resetUnits()
 			showManual.value = false
+			selectedSource.value = null
+			selectedExternalId.value = null
 		} else {
 			const payload = toPayload()
 			const entry = await store.addEntry({
@@ -664,6 +667,15 @@ function editAddedEntry(entry) {
 async function deleteAddedEntry(entry) {
 	await store.deleteEntry(entry.id)
 	addedEntries.value = addedEntries.value.filter(e => e.id !== entry.id)
+
+	if (editingAddedEntry.value?.id === entry.id) {
+		editingAddedEntry.value = null
+		Object.assign(form, defaultForm())
+		resetUnits()
+		showManual.value = false
+		selectedSource.value = null
+		selectedExternalId.value = null
+	}
 }
 </script>
 
