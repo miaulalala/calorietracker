@@ -219,17 +219,20 @@
 		</div>
 		<div class="food-entry-form__actions">
 			<NcButton variant="secondary"
+				native-type="button"
 				@click="store.closeAddModal()">
 				{{ t('calorietracker', 'Cancel') }}
 			</NcButton>
 			<NcButton v-if="!showManual && !editingEntry"
 				variant="secondary"
+				native-type="button"
 				@click="showManual = true">
 				{{ t('calorietracker', 'Add food manually') }}
 			</NcButton>
 			<span class="food-entry-form__actions-spacer" />
 			<NcButton v-if="addedEntries.length > 0 && !showManual && !editingEntry"
 				variant="primary"
+				native-type="button"
 				@click="store.closeAddModal()">
 				{{ t('calorietracker', 'Done') }}
 			</NcButton>
