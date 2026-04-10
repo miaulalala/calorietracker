@@ -36,7 +36,7 @@
 			<p>{{ t('calorietracker', 'No recipes found.') }}</p>
 		</div>
 
-		<ul v-if="results.length > 0"
+		<ul v-if="results.length > 0 && !selectedRecipe"
 			id="recipe-search-results"
 			class="recipe-search__results"
 			role="listbox"
@@ -226,7 +226,6 @@ async function selectRecipe(recipe) {
 			detail.gramsPerServing = estimateGramsPerServing(detail.recipeIngredient, detail.recipeYield)
 		}
 		selectedRecipe.value = detail
-		results.value = []
 	} catch (e) {
 		console.error('Failed to load recipe:', e)
 		estimationError.value = t('calorietracker', 'Failed to load recipe details.')

@@ -252,9 +252,13 @@ class CookbookController extends Controller {
 			$headers['Cookie'] = $cookieHeader;
 		}
 
-		// Forward the requesttoken for CSRF protection
-		$requestToken = $this->session->get('requesttoken');
-		if ($requestToken !== null) {
+		// Forward the requesttoken for CSRF protection, preferring the
+		// incoming request header and falling back to the session token.
+		$requestToken = $this->request->getHeader('requesttoken');
+		if ($requestToken === '') {
+			$requestToken = $this->session->get('requesttoken');
+		}
+		if ($requestToken !== null && $requestToken !== '') {
 			$headers['requesttoken'] = $requestToken;
 		}
 
