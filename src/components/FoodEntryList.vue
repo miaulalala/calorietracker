@@ -145,7 +145,7 @@ const deleteDialogButtons = computed(() => [
 	},
 	{
 		label: t('calorietracker', 'Delete'),
-		type: 'primary',
+		type: 'error',
 		callback: () => doDelete(),
 	},
 ])
@@ -219,11 +219,19 @@ async function doDelete() {
 }
 
 .food-entry-list__meal-heading:hover,
-.food-entry-list__meal-heading:focus,
 .food-entry-list__meal-heading:active {
 	color: var(--color-main-text);
 	background: none;
+}
+
+.food-entry-list__meal-heading:focus:not(:focus-visible) {
 	outline: none;
+}
+
+.food-entry-list__meal-heading:focus-visible {
+	outline: 2px solid var(--color-primary-element);
+	outline-offset: 2px;
+	border-radius: var(--border-radius);
 }
 
 .food-entry-list__separator {
