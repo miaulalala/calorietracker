@@ -416,7 +416,7 @@ function onSearchInput() {
 	searchError.value = false
 	searchWarning.value = ''
 	clearTimeout(searchDebounce.value)
-	if (searchQuery.value.length < 2) {
+	if (searchQuery.value.trim().length < 2) {
 		searchResults.value = []
 		searchDone.value = false
 		return
@@ -470,14 +470,15 @@ function rankResults(results, query) {
  *
  */
 async function runSearch() {
+	const query = searchQuery.value.trim()
 	searchLoading.value = true
 	searchDone.value = false
 	searchError.value = false
 	searchWarning.value = ''
 	try {
 		const [usdaRes, offRes] = await Promise.allSettled([
-			usdaApi.search(searchQuery.value),
-			offApi.search(searchQuery.value),
+			usdaApi.search(query),
+			offApi.search(query),
 		])
 		if (usdaRes.status === 'rejected') {
 			console.error('USDA search failed:', usdaRes.reason)
@@ -489,7 +490,7 @@ async function runSearch() {
 			...(usdaRes.status === 'fulfilled' ? usdaRes.value : []),
 			...(offRes.status === 'fulfilled' ? offRes.value : []),
 		]
-		searchResults.value = rankResults(merged, searchQuery.value)
+		searchResults.value = rankResults(merged, query)
 		const bothFailed = usdaRes.status === 'rejected' && offRes.status === 'rejected'
 		searchError.value = bothFailed
 		if (!bothFailed && usdaRes.status === 'rejected') {
