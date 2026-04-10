@@ -94,7 +94,7 @@ class UsdaFdcController extends Controller {
 	}
 
 	#[NoAdminRequired]
-	#[UserRateLimit(limit: 20, period: 60)]
+	#[UserRateLimit(limit: 30, period: 60)]
 	public function search(string $query): JSONResponse {
 		$query = trim($query);
 		if (strlen($query) < 2) {
