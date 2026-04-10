@@ -138,31 +138,8 @@ export function parseIngredient(ingredient) {
 }
 
 /**
- * Look up an ingredient in the USDA database and return per-100g nutrition.
- * Returns null if not found.
- * @param {string} name Food name to search
- * @return {Promise<{caloriesPer100g: number, proteinPer100g: number|null, carbsPer100g: number|null, fatPer100g: number|null}|null>}
- */
-async function lookupIngredient(name) {
-	try {
-		const results = await usdaApi.search(name)
-		if (!results || results.length === 0) return null
-		// Take the first result (most relevant)
-		const r = results[0]
-		return {
-			caloriesPer100g: r.caloriesPer100g,
-			proteinPer100g: r.proteinPer100g,
-			carbsPer100g: r.carbsPer100g,
-			fatPer100g: r.fatPer100g,
-		}
-	} catch {
-		return null
-	}
-}
-
-/**
  * Estimate the total nutrition for a recipe given its ingredient list.
- * Parses each ingredient, looks it up in the food database, and sums
+ * Parses each ingredient, batch-looks them up in the food database, and sums
  * the total. Returns per-serving values.
  *
  * @param {string[]} ingredients Array of ingredient text strings
@@ -172,16 +149,15 @@ async function lookupIngredient(name) {
 export async function estimateRecipeNutrition(ingredients, recipeYield) {
 	const servings = parseInt(String(recipeYield), 10) || 1
 
-	// Look up all ingredients in parallel (batches of 5 to avoid rate limits)
+	// Parse all ingredients and batch-lookup via a single server request
 	const parsed = ingredients.map(parseIngredient)
-	const lookups = []
+	const names = parsed.map(p => p.name)
 
-	for (let i = 0; i < parsed.length; i += 5) {
-		const batch = parsed.slice(i, i + 5)
-		const batchResults = await Promise.allSettled(
-			batch.map(p => lookupIngredient(p.name)),
-		)
-		lookups.push(...batchResults)
+	let lookups
+	try {
+		lookups = await usdaApi.batchSearch(names)
+	} catch {
+		throw new Error('No ingredients could be matched in the food database')
 	}
 
 	let totalKcal = 0
@@ -194,10 +170,8 @@ export async function estimateRecipeNutrition(ingredients, recipeYield) {
 	let hasFat = false
 
 	for (let i = 0; i < parsed.length; i++) {
-		const result = lookups[i]
-		if (!result || result.status !== 'fulfilled' || !result.value) continue
-
-		const nutrition = result.value
+		const nutrition = lookups[i]
+		if (!nutrition || nutrition.caloriesPer100g == null) continue
 		const grams = parsed[i].estimatedGrams || 100
 		const factor = grams / 100
 

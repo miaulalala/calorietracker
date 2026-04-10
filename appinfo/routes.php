@@ -16,6 +16,7 @@ return [
 		['name' => 'open_food_facts#search', 'url' => '/off/search', 'verb' => 'GET'],
 		['name' => 'open_food_facts#barcode', 'url' => '/off/barcode/{code}', 'verb' => 'GET'],
 		['name' => 'usda_fdc#search', 'url' => '/usda/search', 'verb' => 'GET'],
+		['name' => 'usda_fdc#batchSearch', 'url' => '/usda/batch-search', 'verb' => 'POST'],
 
 		// cookbook recipe search
 		['name' => 'cookbook#search', 'url' => '/cookbook/search', 'verb' => 'GET'],

@@ -67,6 +67,32 @@ class UsdaFdcController extends Controller {
 		$this->cache = $cacheFactory->createDistributed('calorietracker');
 	}
 
+	/**
+	 * Batch search: look up multiple ingredient names in one request.
+	 * Returns the first result per query. Used by recipe nutrition estimation
+	 * to avoid hitting the per-user rate limit.
+	 *
+	 * @param string $queries JSON-encoded array of search strings (max 20)
+	 */
+	#[NoAdminRequired]
+	#[UserRateLimit(limit: 5, period: 60)]
+	public function batchSearch(string $queries): JSONResponse {
+		$names = json_decode($queries, true);
+		if (!is_array($names)) {
+			return new JSONResponse(['error' => 'queries must be a JSON array'], Http::STATUS_BAD_REQUEST);
+		}
+		$names = array_slice(array_filter(array_map('trim', $names), static fn (string $s) => strlen($s) >= 2), 0, 20);
+
+		$results = [];
+		foreach ($names as $name) {
+			$single = $this->searchSingle($name);
+			// Take only the first (best) match
+			$results[] = !empty($single) ? $single[0] : null;
+		}
+
+		return new JSONResponse($results);
+	}
+
 	#[NoAdminRequired]
 	#[UserRateLimit(limit: 20, period: 60)]
 	public function search(string $query): JSONResponse {
@@ -75,103 +101,8 @@ class UsdaFdcController extends Controller {
 			return new JSONResponse([]);
 		}
 
-		$searchKey = 'fdcsearch:' . md5(strtolower($query));
-
-		$cached = $this->cache->get($searchKey);
-		if ($cached !== null) {
-			return new JSONResponse($cached);
-		}
-
 		try {
-			$client = $this->clientService->newClient();
-			$apiKey = $this->config->getAppValue('calorietracker', 'usda_api_key', self::FDC_API_KEY_DEFAULT);
-			$response = $client->get(self::FDC_SEARCH_URL, [
-				'query' => [
-					'api_key'  => $apiKey,
-					'query'    => $query,
-					'dataType' => 'Foundation,SR Legacy,Survey (FNDDS),Branded',
-					'pageSize' => 20,
-				],
-				'headers' => ['User-Agent' => self::USER_AGENT],
-				'timeout' => 15,
-			]);
-
-			$data = json_decode($response->getBody(), true);
-			if (json_last_error() !== JSON_ERROR_NONE || !is_array($data)) {
-				throw new \RuntimeException('Invalid JSON response from USDA FDC API');
-			}
-			$foods = isset($data['foods']) && is_array($data['foods']) ? $data['foods'] : [];
-
-			$results = [];
-			foreach ($foods as $food) {
-				if (!is_array($food)) {
-					continue;
-				}
-				$name = trim($food['description'] ?? '');
-				if ($name === '') {
-					continue;
-				}
-
-				// Index nutrients by nutrientId for fast lookup
-				$nutrients = [];
-				$foodNutrients = isset($food['foodNutrients']) && is_array($food['foodNutrients'])
-					? $food['foodNutrients'] : [];
-				foreach ($foodNutrients as $n) {
-					if (!is_array($n)) {
-						continue;
-					}
-					$id = $n['nutrientId'] ?? null;
-					if ($id !== null) {
-						$nutrients[(int) $id] = $n['value'] ?? null;
-					}
-				}
-
-				$kcal = $nutrients[self::NUTRIENT_KCAL] ?? null;
-				if ($kcal === null) {
-					continue;
-				}
-
-				$result = [
-					'source'          => 'usda_fdc',
-					'externalId'      => isset($food['fdcId']) ? (string) $food['fdcId'] : null,
-					'name'            => $name,
-					'caloriesPer100g' => (int) round((float) $kcal),
-					'proteinPer100g'  => isset($nutrients[self::NUTRIENT_PROTEIN])
-						? (int) round((float) $nutrients[self::NUTRIENT_PROTEIN]) : null,
-					'carbsPer100g'    => isset($nutrients[self::NUTRIENT_CARBS])
-						? (int) round((float) $nutrients[self::NUTRIENT_CARBS]) : null,
-					'fatPer100g'      => isset($nutrients[self::NUTRIENT_FAT])
-						? (int) round((float) $nutrients[self::NUTRIENT_FAT]) : null,
-					'_order'          => self::DATA_TYPE_ORDER[$food['dataType'] ?? ''] ?? 99,
-				];
-
-				// Include serving size info when available
-				if (isset($food['servingSize']) && is_numeric($food['servingSize'])) {
-					$unit = strtolower(trim($food['servingSizeUnit'] ?? ''));
-					$servingGrams = ($unit === 'g') ? (float) $food['servingSize'] : null;
-					if ($servingGrams !== null && $servingGrams > 0) {
-						$result['servingSizeGrams'] = round($servingGrams, 1);
-						$result['servingDescription'] = $food['householdServingFullText'] ?? null;
-					}
-				}
-
-				$results[] = $result;
-			}
-
-			// Whole foods (Foundation, SR Legacy) first, branded products last
-			usort($results, static fn (array $a, array $b): int => $a['_order'] <=> $b['_order']);
-
-			$results = array_slice(
-				array_map(static function (array $r): array {
-					unset($r['_order']);
-					return $r;
-				}, $results),
-				0, 10
-			);
-
-			$this->cache->set($searchKey, $results, self::TTL_SEARCH);
-
-			return new JSONResponse($results);
+			return new JSONResponse($this->searchSingle($query));
 		} catch (\Exception $e) {
 			$this->logger->error('USDA FDC search failed for query "{query}": {message}', [
 				'query'     => $query,
@@ -181,5 +112,109 @@ class UsdaFdcController extends Controller {
 			]);
 			return new JSONResponse(['error' => 'Search failed'], Http::STATUS_BAD_GATEWAY);
 		}
+	}
+
+	/**
+	 * Search the USDA FDC API for a single query. Uses caching.
+	 *
+	 * @return array<array> List of food results
+	 */
+	private function searchSingle(string $query): array {
+		$searchKey = 'fdcsearch:' . md5(strtolower($query));
+
+		$cached = $this->cache->get($searchKey);
+		if ($cached !== null) {
+			return $cached;
+		}
+
+		$client = $this->clientService->newClient();
+		$apiKey = $this->config->getAppValue('calorietracker', 'usda_api_key', self::FDC_API_KEY_DEFAULT);
+		$response = $client->get(self::FDC_SEARCH_URL, [
+			'query' => [
+				'api_key'  => $apiKey,
+				'query'    => $query,
+				'dataType' => 'Foundation,SR Legacy,Survey (FNDDS),Branded',
+				'pageSize' => 20,
+			],
+			'headers' => ['User-Agent' => self::USER_AGENT],
+			'timeout' => 15,
+		]);
+
+		$data = json_decode($response->getBody(), true);
+		if (json_last_error() !== JSON_ERROR_NONE || !is_array($data)) {
+			throw new \RuntimeException('Invalid JSON response from USDA FDC API');
+		}
+		$foods = isset($data['foods']) && is_array($data['foods']) ? $data['foods'] : [];
+
+		$results = [];
+		foreach ($foods as $food) {
+			if (!is_array($food)) {
+				continue;
+			}
+			$name = trim($food['description'] ?? '');
+			if ($name === '') {
+				continue;
+			}
+
+			// Index nutrients by nutrientId for fast lookup
+			$nutrients = [];
+			$foodNutrients = isset($food['foodNutrients']) && is_array($food['foodNutrients'])
+				? $food['foodNutrients'] : [];
+			foreach ($foodNutrients as $n) {
+				if (!is_array($n)) {
+					continue;
+				}
+				$id = $n['nutrientId'] ?? null;
+				if ($id !== null) {
+					$nutrients[(int) $id] = $n['value'] ?? null;
+				}
+			}
+
+			$kcal = $nutrients[self::NUTRIENT_KCAL] ?? null;
+			if ($kcal === null) {
+				continue;
+			}
+
+			$result = [
+				'source'          => 'usda_fdc',
+				'externalId'      => isset($food['fdcId']) ? (string) $food['fdcId'] : null,
+				'name'            => $name,
+				'caloriesPer100g' => (int) round((float) $kcal),
+				'proteinPer100g'  => isset($nutrients[self::NUTRIENT_PROTEIN])
+					? (int) round((float) $nutrients[self::NUTRIENT_PROTEIN]) : null,
+				'carbsPer100g'    => isset($nutrients[self::NUTRIENT_CARBS])
+					? (int) round((float) $nutrients[self::NUTRIENT_CARBS]) : null,
+				'fatPer100g'      => isset($nutrients[self::NUTRIENT_FAT])
+					? (int) round((float) $nutrients[self::NUTRIENT_FAT]) : null,
+				'_order'          => self::DATA_TYPE_ORDER[$food['dataType'] ?? ''] ?? 99,
+			];
+
+			// Include serving size info when available
+			if (isset($food['servingSize']) && is_numeric($food['servingSize'])) {
+				$unit = strtolower(trim($food['servingSizeUnit'] ?? ''));
+				$servingGrams = ($unit === 'g') ? (float) $food['servingSize'] : null;
+				if ($servingGrams !== null && $servingGrams > 0) {
+					$result['servingSizeGrams'] = round($servingGrams, 1);
+					$result['servingDescription'] = $food['householdServingFullText'] ?? null;
+				}
+			}
+
+			$results[] = $result;
+		}
+
+		// Whole foods (Foundation, SR Legacy) first, branded products last
+		usort($results, static fn (array $a, array $b): int => $a['_order'] <=> $b['_order']);
+
+		$results = array_slice(
+			array_map(static function (array $r): array {
+				unset($r['_order']);
+				return $r;
+			}, $results),
+			0, 10
+		);
+
+		$this->cache->set($searchKey, $results, self::TTL_SEARCH);
+
+		return $results;
 	}
 }

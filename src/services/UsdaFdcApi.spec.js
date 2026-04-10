@@ -8,6 +8,7 @@ import { beforeEach, describe, expect, test, vi } from 'vitest'
 vi.mock('@nextcloud/axios', () => ({
 	default: {
 		get: vi.fn(),
+		post: vi.fn(),
 	},
 }))
 
@@ -44,5 +45,18 @@ describe('UsdaFdcApi', () => {
 	test('search propagates errors', async () => {
 		axios.get.mockRejectedValue(new Error('network error'))
 		await expect(api.search('chicken')).rejects.toThrow('network error')
+	})
+
+	test('batchSearch POSTs /usda/batch-search with JSON queries', async () => {
+		const results = [{ caloriesPer100g: 165 }, null]
+		axios.post.mockResolvedValue({ data: results })
+
+		const result = await api.batchSearch(['chicken', 'unknown'])
+
+		expect(axios.post).toHaveBeenCalledWith(
+			'/nc/apps/calorietracker/usda/batch-search',
+			{ queries: JSON.stringify(['chicken', 'unknown']) },
+		)
+		expect(result).toEqual(results)
 	})
 })

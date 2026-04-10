@@ -8,6 +8,7 @@ import { describe, expect, test, vi } from 'vitest'
 vi.mock('../services/UsdaFdcApi.js', () => ({
 	default: {
 		search: vi.fn(),
+		batchSearch: vi.fn(),
 	},
 }))
 
@@ -94,19 +95,20 @@ describe('parseIngredient', () => {
 
 describe('estimateRecipeNutrition', () => {
 	test('sums nutrition per serving and returns null for missing macros', async () => {
-		usdaApi.search
-			.mockResolvedValueOnce([{
+		usdaApi.batchSearch.mockResolvedValue([
+			{
 				caloriesPer100g: 200,
 				proteinPer100g: 20,
 				carbsPer100g: null,
 				fatPer100g: 10,
-			}])
-			.mockResolvedValueOnce([{
+			},
+			{
 				caloriesPer100g: 100,
 				proteinPer100g: 5,
 				carbsPer100g: null,
 				fatPer100g: 3,
-			}])
+			},
+		])
 
 		const result = await estimateRecipeNutrition(
 			['200g chicken', '100g rice'],
@@ -121,10 +123,18 @@ describe('estimateRecipeNutrition', () => {
 	})
 
 	test('throws when no ingredients match', async () => {
-		usdaApi.search.mockResolvedValue([])
+		usdaApi.batchSearch.mockResolvedValue([null])
 
 		await expect(
 			estimateRecipeNutrition(['unknown thing'], '1'),
+		).rejects.toThrow('No ingredients could be matched')
+	})
+
+	test('throws when batch search fails', async () => {
+		usdaApi.batchSearch.mockRejectedValue(new Error('network error'))
+
+		await expect(
+			estimateRecipeNutrition(['chicken'], '1'),
 		).rejects.toThrow('No ingredients could be matched')
 	})
 })

@@ -14,4 +14,10 @@ export default {
 			params: { query },
 		}).then(r => r.data)
 	},
+
+	batchSearch(queries) {
+		return axios.post(url('/usda/batch-search'), {
+			queries: JSON.stringify(queries),
+		}).then(r => r.data)
+	},
 }
