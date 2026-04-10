@@ -611,12 +611,11 @@ async function submit() {
 			store.closeAddModal()
 		} else if (editingAddedEntry.value) {
 			// Re-saving a previously added entry
-			await store.updateEntry({
+			const updated = await store.updateEntry({
 				id: editingAddedEntry.value.id,
 				...toPayload(),
 			})
-			// Replace the old version in the addedEntries list
-			const updated = { ...editingAddedEntry.value, ...toPayload() }
+			// Replace the old version in the addedEntries list with the server-returned entry
 			const idx = addedEntries.value.findIndex(e => e.id === editingAddedEntry.value.id)
 			if (idx !== -1) addedEntries.value.splice(idx, 1, updated)
 			editingAddedEntry.value = null

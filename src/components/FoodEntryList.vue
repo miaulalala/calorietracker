@@ -18,6 +18,8 @@
 			<div v-if="groups[mealType].length > 0" :key="mealType" class="food-entry-list__group">
 				<button class="food-entry-list__meal-heading"
 					type="button"
+					role="heading"
+					aria-level="4"
 					:aria-expanded="!collapsed[mealType]"
 					@click="collapsed[mealType] = !collapsed[mealType]">
 					<span class="food-entry-list__chevron"

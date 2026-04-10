@@ -75,6 +75,7 @@ export const useFoodEntriesStore = defineStore('foodEntries', {
 			const index = this.entries.findIndex(e => e.id === id)
 			if (index !== -1) this.entries.splice(index, 1, entry)
 			await this.fetchSummaries()
+			return entry
 		},
 
 		async deleteEntry(id) {

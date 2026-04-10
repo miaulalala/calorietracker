@@ -38,7 +38,7 @@ const { addModalOpen, editingEntry } = storeToRefs(store)
 <style>
 /* Fixed-size modal with internal scrolling */
 .add-food-modal .modal-container {
-	height: min(70vh, calc(100% - 2 * var(--header-height) - 2 * var(--body-container-margin))) !important;
+	height: min(70vh, calc(100% - 2 * var(--header-height, 50px) - 2 * var(--body-container-margin, 0px))) !important;
 	overflow: hidden !important;
 	display: flex !important;
 	flex-direction: column !important;
