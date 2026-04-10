@@ -115,10 +115,12 @@ describe('estimateRecipeNutrition', () => {
 			'2',
 		)
 
-		expect(result.caloriesPer100g).toBeGreaterThan(0)
-		expect(result.proteinPer100g).toBeGreaterThan(0)
-		expect(result.carbsPer100g).toBeNull()
-		expect(result.fatPer100g).toBeGreaterThan(0)
+		expect(result.caloriesPerServing).toBeGreaterThan(0)
+		expect(result.proteinPerServing).toBeGreaterThan(0)
+		expect(result.carbsPerServing).toBeNull()
+		expect(result.fatPerServing).toBeGreaterThan(0)
+		// 200g chicken + 100g rice = 300g total / 2 servings = 150g per serving
+		expect(result.gramsPerServing).toBe(150)
 		expect(result.servingSize).toBe('1/2 of recipe')
 	})
 

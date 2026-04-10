@@ -138,6 +138,20 @@ export function parseIngredient(ingredient) {
 }
 
 /**
+ * Estimate the total weight of a recipe from its ingredient list.
+ * @param {string[]} ingredients Array of ingredient text strings
+ * @param {string|number|null} recipeYield Number of servings
+ * @return {number} Estimated grams per serving
+ */
+export function estimateGramsPerServing(ingredients, recipeYield) {
+	const servings = parseInt(String(recipeYield), 10) || 1
+	const totalGrams = ingredients
+		.map(parseIngredient)
+		.reduce((sum, p) => sum + (p.estimatedGrams || 100), 0)
+	return Math.round(totalGrams / servings)
+}
+
+/**
  * Estimate the total nutrition for a recipe given its ingredient list.
  * Parses each ingredient, batch-looks them up in the food database, and sums
  * the total. Returns per-serving values.
@@ -195,12 +209,16 @@ export async function estimateRecipeNutrition(ingredients, recipeYield) {
 		throw new Error('No ingredients could be matched in the food database')
 	}
 
-	// Per-serving values (stored as "per serving" not "per 100g" for recipes)
+	const totalGrams = parsed.reduce((sum, p) => sum + (p.estimatedGrams || 100), 0)
+	const gramsPerServing = Math.round(totalGrams / servings)
+
+	// Per-serving values
 	return {
-		caloriesPer100g: Math.round(totalKcal / servings),
-		proteinPer100g: hasProtein ? Math.round(totalProtein / servings) : null,
-		carbsPer100g: hasCarbs ? Math.round(totalCarbs / servings) : null,
-		fatPer100g: hasFat ? Math.round(totalFat / servings) : null,
+		caloriesPerServing: Math.round(totalKcal / servings),
+		proteinPerServing: hasProtein ? Math.round(totalProtein / servings) : null,
+		carbsPerServing: hasCarbs ? Math.round(totalCarbs / servings) : null,
+		fatPerServing: hasFat ? Math.round(totalFat / servings) : null,
+		gramsPerServing,
 		servingSize: `1/${servings} of recipe`,
 	}
 }

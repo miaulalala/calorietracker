@@ -95,10 +95,10 @@ class CookbookController extends Controller {
 				'recipeYield' => $recipe['recipeYield'] ?? null,
 				'recipeIngredient' => $recipe['recipeIngredient'] ?? [],
 				'nutrition' => $nutrition,
-				'caloriesPer100g' => $this->extractNutrientValue($nutrition, 'calories'),
-				'proteinPer100g' => $this->extractNutrientValue($nutrition, 'proteinContent'),
-				'carbsPer100g' => $this->extractNutrientValue($nutrition, 'carbohydrateContent'),
-				'fatPer100g' => $this->extractNutrientValue($nutrition, 'fatContent'),
+				'caloriesPerServing' => $this->extractNutrientValue($nutrition, 'calories'),
+				'proteinPerServing' => $this->extractNutrientValue($nutrition, 'proteinContent'),
+				'carbsPerServing' => $this->extractNutrientValue($nutrition, 'carbohydrateContent'),
+				'fatPerServing' => $this->extractNutrientValue($nutrition, 'fatContent'),
 			]);
 		} catch (\Exception $e) {
 			$this->logger->error('Cookbook recipe fetch failed for id {id}: {message}', [
@@ -112,7 +112,14 @@ class CookbookController extends Controller {
 	}
 
 	#[NoAdminRequired]
-	public function updateNutrition(int $id): JSONResponse {
+	public function updateNutrition(
+		int $id,
+		?float $calories = null,
+		?float $protein = null,
+		?float $carbs = null,
+		?float $fat = null,
+		?string $servingSize = null,
+	): JSONResponse {
 		try {
 			// Get the full recipe first
 			$recipe = $this->cookbookGet('/apps/cookbook/webapp/recipes/' . $id);
@@ -121,42 +128,25 @@ class CookbookController extends Controller {
 				return new JSONResponse(['error' => 'Recipe not found'], Http::STATUS_NOT_FOUND);
 			}
 
-			// Read nutrition values from the request body
 			$nutrition = $recipe['nutrition'] ?? [];
 			if (!is_array($nutrition)) {
 				$nutrition = [];
 			}
 
-			$calories = $this->request->getParam('calories');
-			$protein = $this->request->getParam('protein');
-			$carbs = $this->request->getParam('carbs');
-			$fat = $this->request->getParam('fat');
-			$servingSize = $this->request->getParam('servingSize');
-
-			// Validate that numeric fields are actually numeric
-			foreach (['calories' => $calories, 'protein' => $protein, 'carbs' => $carbs, 'fat' => $fat] as $field => $value) {
-				if ($value !== null && !is_numeric($value)) {
-					return new JSONResponse(
-						['error' => "Invalid value for '$field': must be numeric"],
-						Http::STATUS_BAD_REQUEST,
-					);
-				}
-			}
-
 			if ($calories !== null) {
-				$nutrition['calories'] = round((float)$calories) . ' kcal';
+				$nutrition['calories'] = round($calories) . ' kcal';
 			}
 			if ($protein !== null) {
-				$nutrition['proteinContent'] = round((float)$protein, 1) . ' g';
+				$nutrition['proteinContent'] = round($protein, 1) . ' g';
 			}
 			if ($carbs !== null) {
-				$nutrition['carbohydrateContent'] = round((float)$carbs, 1) . ' g';
+				$nutrition['carbohydrateContent'] = round($carbs, 1) . ' g';
 			}
 			if ($fat !== null) {
-				$nutrition['fatContent'] = round((float)$fat, 1) . ' g';
+				$nutrition['fatContent'] = round($fat, 1) . ' g';
 			}
 			if ($servingSize !== null) {
-				$nutrition['servingSize'] = (string)$servingSize;
+				$nutrition['servingSize'] = $servingSize;
 			}
 
 			$recipe['nutrition'] = $nutrition;

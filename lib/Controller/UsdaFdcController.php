@@ -81,13 +81,30 @@ class UsdaFdcController extends Controller {
 		if (!is_array($names)) {
 			return new JSONResponse(['error' => 'queries must be a JSON array'], Http::STATUS_BAD_REQUEST);
 		}
-		$names = array_slice(array_filter(array_map('trim', $names), static fn (string $s) => strlen($s) >= 2), 0, 20);
 
+		// Preserve 1:1 alignment with input array — return null for
+		// invalid/short queries so the client can index by position.
+		$processed = 0;
 		$results = [];
 		foreach ($names as $name) {
-			$single = $this->searchSingle($name);
-			// Take only the first (best) match
-			$results[] = !empty($single) ? $single[0] : null;
+			if (!is_string($name) || strlen(trim($name)) < 2 || $processed >= 20) {
+				$results[] = null;
+				continue;
+			}
+
+			try {
+				$single = $this->searchSingle(trim($name));
+				$results[] = !empty($single) ? $single[0] : null;
+			} catch (\Exception $e) {
+				$this->logger->error('USDA FDC batch search failed for query "{query}": {message}', [
+					'query'     => $name,
+					'message'   => $e->getMessage(),
+					'exception' => $e,
+					'app'       => 'calorietracker',
+				]);
+				$results[] = null;
+			}
+			$processed++;
 		}
 
 		return new JSONResponse($results);

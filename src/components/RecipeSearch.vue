@@ -64,15 +64,15 @@
 			</div>
 
 			<template v-else>
-				<div v-if="selectedRecipe.caloriesPer100g != null" class="recipe-search__nutrition">
+				<div v-if="selectedRecipe.caloriesPerServing != null" class="recipe-search__nutrition">
 					<p class="recipe-search__section-label">
 						{{ t('calorietracker', 'Nutrition per serving') }}
 					</p>
 					<div class="recipe-search__nutrition-grid">
-						<span>{{ displayEnergy(selectedRecipe.caloriesPer100g) }} {{ energyLabel }}</span>
-						<span v-if="selectedRecipe.proteinPer100g != null">P {{ selectedRecipe.proteinPer100g }}g</span>
-						<span v-if="selectedRecipe.carbsPer100g != null">C {{ selectedRecipe.carbsPer100g }}g</span>
-						<span v-if="selectedRecipe.fatPer100g != null">F {{ selectedRecipe.fatPer100g }}g</span>
+						<span>{{ displayEnergy(selectedRecipe.caloriesPerServing) }} {{ energyLabel }}</span>
+						<span v-if="selectedRecipe.proteinPerServing != null">P {{ selectedRecipe.proteinPerServing }}g</span>
+						<span v-if="selectedRecipe.carbsPerServing != null">C {{ selectedRecipe.carbsPerServing }}g</span>
+						<span v-if="selectedRecipe.fatPerServing != null">F {{ selectedRecipe.fatPerServing }}g</span>
 					</div>
 				</div>
 
@@ -83,13 +83,13 @@
 				</div>
 
 				<div class="recipe-search__detail-actions">
-					<NcButton v-if="selectedRecipe.caloriesPer100g == null"
+					<NcButton v-if="selectedRecipe.caloriesPerServing == null"
 						variant="primary"
 						:disabled="estimating"
 						@click="estimateNutrition">
 						{{ t('calorietracker', 'Estimate nutrition') }}
 					</NcButton>
-					<NcButton v-if="selectedRecipe.caloriesPer100g != null"
+					<NcButton v-if="selectedRecipe.caloriesPerServing != null"
 						variant="primary"
 						@click="useRecipe">
 						{{ t('calorietracker', 'Use this recipe') }}
@@ -112,7 +112,7 @@ import NcButton from '@nextcloud/vue/components/NcButton'
 import NcLoadingIcon from '@nextcloud/vue/components/NcLoadingIcon'
 import { useUnits } from '../composables/useUnits.js'
 import cookbookApi from '../services/CookbookApi.js'
-import { estimateRecipeNutrition } from '../utils/ingredientParser.js'
+import { estimateRecipeNutrition, estimateGramsPerServing } from '../utils/ingredientParser.js'
 
 const emit = defineEmits(['select'])
 const { displayEnergy, energyLabel } = useUnits()
@@ -156,7 +156,11 @@ function highlightNext() {
  */
 function highlightPrev() {
 	if (results.value.length === 0) return
-	highlightedIndex.value = (highlightedIndex.value - 1 + results.value.length) % results.value.length
+	if (highlightedIndex.value <= 0) {
+		highlightedIndex.value = results.value.length - 1
+		return
+	}
+	highlightedIndex.value--
 }
 
 /**
@@ -217,7 +221,10 @@ async function selectRecipe(recipe) {
 	estimationError.value = ''
 	try {
 		const detail = await cookbookApi.getRecipe(recipe.id)
-		detail.hasNutrition = detail.caloriesPer100g != null
+		detail.hasNutrition = detail.caloriesPerServing != null
+		if (detail.recipeIngredient?.length) {
+			detail.gramsPerServing = estimateGramsPerServing(detail.recipeIngredient, detail.recipeYield)
+		}
 		selectedRecipe.value = detail
 		results.value = []
 	} catch (e) {
@@ -253,10 +260,10 @@ async function estimateNutrition() {
 		// Write the nutrition back to the cookbook app
 		try {
 			await cookbookApi.updateNutrition(selectedRecipe.value.id, {
-				calories: nutrition.caloriesPer100g,
-				protein: nutrition.proteinPer100g,
-				carbs: nutrition.carbsPer100g,
-				fat: nutrition.fatPer100g,
+				calories: nutrition.caloriesPerServing,
+				protein: nutrition.proteinPerServing,
+				carbs: nutrition.carbsPerServing,
+				fat: nutrition.fatPerServing,
 				servingSize: nutrition.servingSize,
 			})
 		} catch (e) {
@@ -280,10 +287,11 @@ function useRecipe() {
 		name: selectedRecipe.value.name,
 		source: 'cookbook',
 		externalId: String(selectedRecipe.value.id),
-		caloriesPer100g: selectedRecipe.value.caloriesPer100g,
-		proteinPer100g: selectedRecipe.value.proteinPer100g,
-		carbsPer100g: selectedRecipe.value.carbsPer100g,
-		fatPer100g: selectedRecipe.value.fatPer100g,
+		caloriesPerServing: selectedRecipe.value.caloriesPerServing,
+		proteinPerServing: selectedRecipe.value.proteinPerServing,
+		carbsPerServing: selectedRecipe.value.carbsPerServing,
+		fatPerServing: selectedRecipe.value.fatPerServing,
+		gramsPerServing: selectedRecipe.value.gramsPerServing ?? 100,
 		recipeYield: selectedRecipe.value.recipeYield,
 	})
 }

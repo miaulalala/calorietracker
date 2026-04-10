@@ -543,14 +543,18 @@ async function runSearch() {
  */
 function onRecipeSelect(recipe) {
 	form.foodName = recipe.name
-	form.caloriesPer100g = displayEnergy(displayPer100g(recipe.caloriesPer100g))
-	form.proteinPer100g = recipe.proteinPer100g != null ? displayPer100g(recipe.proteinPer100g) : ''
-	form.carbsPer100g = recipe.carbsPer100g != null ? displayPer100g(recipe.carbsPer100g) : ''
-	form.fatPer100g = recipe.fatPer100g != null ? displayPer100g(recipe.fatPer100g) : ''
+	// Convert per-serving nutrition to per-100g for internal storage.
+	// The serving unit's gramsPerUnit reflects the actual estimated weight.
+	const gps = recipe.gramsPerServing || 100
+	const toP100 = (val) => val != null ? Math.round(val * 100 / gps) : ''
+	form.caloriesPer100g = displayEnergy(toP100(recipe.caloriesPerServing))
+	form.proteinPer100g = toP100(recipe.proteinPerServing)
+	form.carbsPer100g = toP100(recipe.carbsPerServing)
+	form.fatPer100g = toP100(recipe.fatPerServing)
 	selectedSource.value = recipe.source ?? 'cookbook'
 	selectedExternalId.value = recipe.externalId ?? null
 
-	// Build unit options: serving (= 100g internally) + base weight unit
+	// Build unit options: serving with actual estimated weight + base weight unit
 	const servings = parseInt(String(recipe.recipeYield), 10) || null
 	const servingLabel = servings
 		? t('calorietracker', 'serving (makes {count})', { count: servings })
@@ -558,7 +562,7 @@ function onRecipeSelect(recipe) {
 	const servingOption = {
 		value: 'serving',
 		label: servingLabel,
-		gramsPerUnit: 100,
+		gramsPerUnit: gps,
 	}
 	unitOptions.value = [servingOption, ...defaultUnitOptions()]
 	selectedUnit.value = servingOption
