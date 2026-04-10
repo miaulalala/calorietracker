@@ -7,41 +7,63 @@
 	<div class="food-entry-list">
 		<div v-if="!isEmpty" class="food-entry-list__add">
 			<NcButton variant="primary" @click="store.openAddModal()">
+				<template #icon>
+					<NcIconSvgWrapper :svg="iconPlus" />
+				</template>
 				{{ t('calorietracker', 'Add food') }}
 			</NcButton>
 		</div>
 
 		<template v-for="mealType in mealOrder">
 			<div v-if="groups[mealType].length > 0" :key="mealType" class="food-entry-list__group">
-				<h4 class="food-entry-list__meal-heading">
+				<button class="food-entry-list__meal-heading"
+					type="button"
+					:aria-expanded="!collapsed[mealType]"
+					@click="collapsed[mealType] = !collapsed[mealType]">
+					<span class="food-entry-list__chevron"
+						:class="{ 'food-entry-list__chevron--collapsed': collapsed[mealType] }">
+						<NcIconSvgWrapper :svg="iconChevronDown" />
+					</span>
 					{{ mealLabel(mealType) }}
+					<span class="food-entry-list__meal-count">{{ groups[mealType].length }}</span>
 					<span class="food-entry-list__meal-total">
 						{{ mealTotal(groups[mealType]) }} {{ energyLabel }}
 					</span>
-				</h4>
+				</button>
+				<hr class="food-entry-list__separator">
 
-				<ul class="food-entry-list__items">
-					<NcListItem v-for="entry in groups[mealType]"
+				<NcFormBox v-show="!collapsed[mealType]">
+					<NcFormBoxButton v-for="entry in groups[mealType]"
 						:key="entry.id"
-						:name="entry.foodName"
-						:subname="entrySubname(entry)"
-						:compact="true">
-						<template #actions>
-							<NcActionButton @click="store.openAddModal(entry)">
+						:label="entry.foodName"
+						@click="store.openAddModal(entry)">
+						<template #description>
+							<span class="food-entry-list__details">
+								<span class="food-entry-list__detail">{{ displayWeight(entry.amountGrams) }}{{ weightLabel }}</span>
+								<span class="food-entry-list__detail food-entry-list__detail--energy">{{ entryEnergy(entry.caloriesPer100g, entry.amountGrams) }} {{ energyLabel }}</span>
+								<span v-if="entry.proteinPer100g != null" class="food-entry-list__detail food-entry-list__detail--macro">P {{ entryMacroGrams(entry.proteinPer100g, entry.amountGrams) }}{{ weightLabel }}</span>
+								<span v-if="entry.carbsPer100g != null" class="food-entry-list__detail food-entry-list__detail--macro">C {{ entryMacroGrams(entry.carbsPer100g, entry.amountGrams) }}{{ weightLabel }}</span>
+								<span v-if="entry.fatPer100g != null" class="food-entry-list__detail food-entry-list__detail--macro">F {{ entryMacroGrams(entry.fatPer100g, entry.amountGrams) }}{{ weightLabel }}</span>
+							</span>
+						</template>
+						<template #icon>
+							<NcButton variant="tertiary"
+								:aria-label="t('calorietracker', 'Edit')"
+								@click.stop="store.openAddModal(entry)">
 								<template #icon>
 									<NcIconSvgWrapper :svg="iconPencil" />
 								</template>
-								{{ t('calorietracker', 'Edit') }}
-							</NcActionButton>
-							<NcActionButton @click="confirmDelete(entry)">
+							</NcButton>
+							<NcButton variant="tertiary"
+								:aria-label="t('calorietracker', 'Delete')"
+								@click.stop="confirmDelete(entry)">
 								<template #icon>
 									<NcIconSvgWrapper :svg="iconTrash" />
 								</template>
-								{{ t('calorietracker', 'Delete') }}
-							</NcActionButton>
+							</NcButton>
 						</template>
-					</NcListItem>
-				</ul>
+					</NcFormBoxButton>
+				</NcFormBox>
 			</div>
 		</template>
 
@@ -53,6 +75,9 @@
 			</template>
 			<template #action>
 				<NcButton variant="primary" @click="store.openAddModal()">
+					<template #icon>
+						<NcIconSvgWrapper :svg="iconPlus" />
+					</template>
 					{{ t('calorietracker', 'Add food') }}
 				</NcButton>
 			</template>
@@ -62,15 +87,16 @@
 			:name="t('calorietracker', 'Delete entry')"
 			:message="deleteMessage"
 			:buttons="deleteDialogButtons"
+			content-classes="delete-dialog-content"
 			@closing="deleteTarget = null" />
 	</div>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, reactive, computed } from 'vue'
 import { translate as t } from '@nextcloud/l10n'
-import NcListItem from '@nextcloud/vue/components/NcListItem'
-import NcActionButton from '@nextcloud/vue/components/NcActionButton'
+import NcFormBox from '@nextcloud/vue/components/NcFormBox'
+import NcFormBoxButton from '@nextcloud/vue/components/NcFormBoxButton'
 import NcButton from '@nextcloud/vue/components/NcButton'
 import NcIconSvgWrapper from '@nextcloud/vue/components/NcIconSvgWrapper'
 import NcEmptyContent from '@nextcloud/vue/components/NcEmptyContent'
@@ -91,8 +117,16 @@ const { displayEnergy, displayWeight, energyLabel, weightLabel, entryEnergy, ent
 const iconPencil = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20.71 7.04c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.37-.39-1.02-.39-1.41 0l-1.84 1.83 3.75 3.75M3 17.25V21h3.75L17.81 9.93l-3.75-3.75L3 17.25z"/></svg>'
 const iconTrash = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 4h-3.5l-1-1h-5l-1 1H5v2h14M6 19a2 2 0 002 2h8a2 2 0 002-2V7H6v12z"/></svg>'
 const iconFood = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><line x1="9" y1="3" x2="9" y2="7"/><line x1="7" y1="3" x2="7" y2="7"/><path d="M8 7 Q8 9 8 10 L8 13"/><path d="M15 3 L15 7 Q17 8 15 10 L15 13"/></svg>'
+const iconPlus = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>'
+const iconChevronDown = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M7.41 8.58L12 13.17l4.59-4.59L18 10l-6 6-6-6 1.41-1.42z"/></svg>'
 
 const mealOrder = ['breakfast', 'lunch', 'dinner', 'snack']
+const collapsed = reactive({
+	breakfast: false,
+	lunch: false,
+	dinner: false,
+	snack: false,
+})
 const deleteTarget = ref(null)
 
 const isEmpty = computed(() => mealOrder.every(type => props.groups[type].length === 0))
@@ -106,12 +140,12 @@ const deleteMessage = computed(() => {
 const deleteDialogButtons = computed(() => [
 	{
 		label: t('calorietracker', 'Cancel'),
-		type: 'tertiary',
+		type: 'secondary',
 		callback: () => { deleteTarget.value = null },
 	},
 	{
 		label: t('calorietracker', 'Delete'),
-		type: 'error',
+		type: 'primary',
 		callback: () => doDelete(),
 	},
 ])
@@ -130,31 +164,6 @@ function mealLabel(type) {
 	return labels[type] ?? type
 }
 
-/**
- * Build the subtitle string for a food entry.
- * @param {object} entry Food entry object
- */
-function entrySubname(entry) {
-	const parts = [
-		displayWeight(entry.amountGrams) + weightLabel.value,
-		entryEnergy(entry.caloriesPer100g, entry.amountGrams) + ' ' + energyLabel.value,
-	]
-	const wu = weightLabel.value
-	const macros = []
-	if (entry.proteinPer100g != null) {
-		macros.push('P ' + entryMacroGrams(entry.proteinPer100g, entry.amountGrams) + wu)
-	}
-	if (entry.carbsPer100g != null) {
-		macros.push('C ' + entryMacroGrams(entry.carbsPer100g, entry.amountGrams) + wu)
-	}
-	if (entry.fatPer100g != null) {
-		macros.push('F ' + entryMacroGrams(entry.fatPer100g, entry.amountGrams) + wu)
-	}
-	if (macros.length > 0) {
-		parts.push(macros.join('  '))
-	}
-	return parts.join(' · ')
-}
 
 /**
  * Calculate total energy for a list of entries.
@@ -195,23 +204,95 @@ async function doDelete() {
 
 .food-entry-list__meal-heading {
 	display: flex;
-	justify-content: space-between;
-	align-items: baseline;
-	margin: 0 0 6px;
-	padding-bottom: 4px;
-	border-bottom: 1px solid var(--color-border);
+	align-items: center;
+	gap: 4px;
+	width: 100%;
+	margin: 0;
+	padding: 0;
+	border: none;
+	background: none;
 	font-size: 1em;
+	font-weight: bold;
 	text-transform: capitalize;
+	color: var(--color-main-text);
+	cursor: pointer;
+}
+
+.food-entry-list__meal-heading:hover,
+.food-entry-list__meal-heading:focus,
+.food-entry-list__meal-heading:active {
+	color: var(--color-main-text);
+	background: none;
+	outline: none;
+}
+
+.food-entry-list__separator {
+	border: none;
+	border-top: 1px solid var(--color-border);
+	margin: 4px 0 6px;
+}
+
+.food-entry-list__chevron {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	flex-shrink: 0;
+	width: 20px;
+	height: 20px;
+	transition: transform 0.2s ease;
+}
+
+.food-entry-list__chevron--collapsed {
+	transform: rotate(-90deg);
+}
+
+.food-entry-list__meal-count {
+	font-size: 0.8em;
+	font-weight: normal;
+	color: var(--color-text-maxcontrast);
+	background: var(--color-background-hover);
+	border-radius: var(--border-radius-pill);
+	padding: 0 6px;
+	min-width: 1.4em;
+	text-align: center;
 }
 
 .food-entry-list__meal-total {
+	margin-left: auto;
 	font-size: 0.85em;
+	font-weight: normal;
 	color: var(--color-text-maxcontrast);
 }
 
-.food-entry-list__items {
-	list-style: none;
-	margin: 0;
-	padding: 0;
+.food-entry-list__details {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 4px 12px;
+}
+
+.food-entry-list__detail {
+	display: inline-block;
+	white-space: nowrap;
+	min-width: 4em;
+}
+
+.food-entry-list__detail--energy {
+	min-width: 5.5em;
+	font-weight: 500;
+}
+
+.food-entry-list__detail--macro {
+	min-width: 4.5em;
+}
+
+.food-entry-list__group :deep(.form-box) {
+	width: 100%;
+}
+</style>
+
+<style>
+.delete-dialog-content .dialog__text {
+	padding: 16px 20px;
 }
 </style>

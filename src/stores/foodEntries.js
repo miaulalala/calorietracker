@@ -67,6 +67,7 @@ export const useFoodEntriesStore = defineStore('foodEntries', {
 			const entry = await api.createEntry(payload)
 			this.entries.push(entry)
 			await this.fetchSummaries()
+			return entry
 		},
 
 		async updateEntry({ id, ...payload }) {

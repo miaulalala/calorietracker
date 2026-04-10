@@ -4,30 +4,47 @@
 -->
 
 <template>
-	<form class="food-entry-form" @submit.prevent="submit">
+	<div class="food-entry-form">
+		<div class="food-entry-form__scroll">
 		<h2 class="food-entry-form__title">
 			{{ editingEntry ? t('calorietracker', 'Edit entry') : t('calorietracker', 'Add food') }}
 		</h2>
 
+		<!-- Tab toggle — only when cookbook is available and not in edit/manual mode -->
+		<div v-if="cookbookAvailable && !editingEntry && !showManual" class="food-entry-form__tabs">
+			<NcButton :variant="activeTab === 'food' ? 'primary' : 'secondary'"
+				@click="activeTab = 'food'">
+				{{ t('calorietracker', 'Food search') }}
+			</NcButton>
+			<NcButton :variant="activeTab === 'recipes' ? 'primary' : 'secondary'"
+				@click="activeTab = 'recipes'">
+				{{ t('calorietracker', 'Recipes') }}
+			</NcButton>
+		</div>
+
+		<!-- Recipe search tab -->
+		<RecipeSearch v-if="cookbookAvailable && activeTab === 'recipes' && !editingEntry && !showManual"
+			@select="onRecipeSelect" />
+
 		<!-- Search — hidden in edit mode -->
-		<div v-if="!editingEntry && !showManual" class="food-entry-form__search">
+		<div v-if="!editingEntry && !showManual && activeTab === 'food'" class="food-entry-form__search">
 			<div class="food-entry-form__search-input-row">
-				<input v-model="searchQuery"
-					class="food-entry-form__search-input"
+				<NcInputField v-model="searchQuery"
 					type="search"
+					:label="t('calorietracker', 'Search food database')"
+					:placeholder="t('calorietracker', 'e.g. Oatmeal, Banana, Chicken breast…')"
 					role="combobox"
-					:aria-label="t('calorietracker', 'Search food database')"
 					:aria-expanded="searchResults.length > 0"
 					aria-autocomplete="list"
 					aria-controls="food-search-results"
 					autocomplete="off"
+					:loading="searchLoading"
 					@input="onSearchInput"
 					@keydown.down.prevent="highlightNext"
 					@keydown.up.prevent="highlightPrev"
 					@keydown.enter.prevent="selectHighlighted"
 					@keydown.esc="closeSearch"
-					@blur="onSearchBlur">
-				<span v-if="searchLoading" class="food-entry-form__search-spinner" aria-hidden="true" />
+					@blur="onSearchBlur" />
 			</div>
 			<ul v-if="searchResults.length > 0"
 				id="food-search-results"
@@ -41,14 +58,22 @@
 					role="option"
 					:aria-selected="i === highlightedIndex"
 					@mousedown.prevent="selectResult(result)">
-					<span class="food-entry-form__search-result-name">{{ result.name }}</span>
-					<span class="food-entry-form__search-result-meta">
-						<span class="food-entry-form__search-result-kcal">{{ displayEnergy(displayPer100g(result.caloriesPer100g)) }} {{ energyLabel }}/{{ isImperial ? 'oz' : '100g' }}</span>
+					<div class="food-entry-form__search-result-top">
+						<span class="food-entry-form__search-result-name">{{ result.name }}</span>
 						<span class="food-entry-form__search-result-source"
 							:class="`food-entry-form__search-result-source--${result.source}`">{{ result.source === 'off' ? 'OFF' : 'USDA' }}</span>
-					</span>
+					</div>
+					<div class="food-entry-form__search-result-bottom">
+						<span class="food-entry-form__search-result-kcal">{{ displayEnergy(displayPer100g(result.caloriesPer100g)) }} {{ energyLabel }}/{{ isImperial ? 'oz' : '100g' }}</span>
+						<span v-if="result.proteinPer100g != null" class="food-entry-form__search-result-macro">P {{ displayPer100g(result.proteinPer100g) }}{{ weightLabel }}</span>
+						<span v-if="result.carbsPer100g != null" class="food-entry-form__search-result-macro">C {{ displayPer100g(result.carbsPer100g) }}{{ weightLabel }}</span>
+						<span v-if="result.fatPer100g != null" class="food-entry-form__search-result-macro">F {{ displayPer100g(result.fatPer100g) }}{{ weightLabel }}</span>
+					</div>
 				</li>
 			</ul>
+			<p v-if="searchWarning" class="food-entry-form__search-warning">
+				{{ searchWarning }}
+			</p>
 			<div v-else-if="searchError" class="food-entry-form__search-feedback">
 				<p class="food-entry-form__search-empty food-entry-form__search-empty--error">
 					{{ t('calorietracker', 'Could not reach food database.') }}
@@ -59,15 +84,66 @@
 					{{ t('calorietracker', 'No results found.') }}
 				</p>
 			</div>
-			<div class="food-entry-form__search-manual">
-				<NcButton native-type="button" variant="tertiary" @click="showManual = true">
-					{{ t('calorietracker', 'Add food manually') }}
-				</NcButton>
+		</div>
+
+		<!-- Just-added entries — shown in add mode after submitting -->
+		<div v-if="!editingEntry && !showManual && activeTab === 'food' && addedEntries.length > 0" class="food-entry-form__added">
+			<p class="food-entry-form__section-label">
+				{{ t('calorietracker', 'Added') }}
+			</p>
+			<NcFormBox>
+				<NcFormBoxButton v-for="entry in addedEntries"
+					:key="entry.id"
+					:label="entry.foodName"
+					@click="editAddedEntry(entry)">
+					<template #description>
+						<span class="food-entry-form__details">
+							<span class="food-entry-form__detail">{{ displayWeight(entry.amountGrams) }}{{ weightLabel }}</span>
+							<span class="food-entry-form__detail food-entry-form__detail--energy">{{ displayEnergy(Math.round(entry.caloriesPer100g * entry.amountGrams / 100)) }} {{ energyLabel }}</span>
+							<span v-if="entry.proteinPer100g != null" class="food-entry-form__detail food-entry-form__detail--macro">P {{ Math.round(entry.proteinPer100g * entry.amountGrams / 100) }}{{ weightLabel }}</span>
+							<span v-if="entry.carbsPer100g != null" class="food-entry-form__detail food-entry-form__detail--macro">C {{ Math.round(entry.carbsPer100g * entry.amountGrams / 100) }}{{ weightLabel }}</span>
+							<span v-if="entry.fatPer100g != null" class="food-entry-form__detail food-entry-form__detail--macro">F {{ Math.round(entry.fatPer100g * entry.amountGrams / 100) }}{{ weightLabel }}</span>
+						</span>
+					</template>
+					<template #icon>
+						<NcButton variant="tertiary"
+							:aria-label="t('calorietracker', 'Edit')"
+							@click.stop="editAddedEntry(entry)">
+							<template #icon>
+								<NcIconSvgWrapper :svg="iconPencil" />
+							</template>
+						</NcButton>
+						<NcButton variant="tertiary"
+							:aria-label="t('calorietracker', 'Delete')"
+							@click.stop="deleteAddedEntry(entry)">
+							<template #icon>
+								<NcIconSvgWrapper :svg="iconTrash" />
+							</template>
+						</NcButton>
+					</template>
+				</NcFormBoxButton>
+			</NcFormBox>
+		</div>
+
+		<!-- Frequently used foods — shown below search in add mode -->
+		<div v-if="!editingEntry && !showManual && activeTab === 'food' && frequentFoods.length > 0" class="food-entry-form__frequent">
+			<p class="food-entry-form__section-label">
+				{{ t('calorietracker', 'Frequently used') }}
+			</p>
+			<div class="food-entry-form__frequent-list">
+				<button v-for="food in frequentFoods"
+					:key="food.id"
+					type="button"
+					class="food-entry-form__frequent-chip"
+					@click="selectResult(food)">
+					<span class="food-entry-form__frequent-name">{{ food.name }}</span>
+					<span class="food-entry-form__frequent-kcal">{{ displayEnergy(displayPer100g(food.caloriesPer100g)) }} {{ energyLabel }}</span>
+				</button>
 			</div>
 		</div>
 
 		<!-- Manual fields — shown after selecting a result, clicking "Add manually", or in edit mode -->
-		<template v-if="showManual || editingEntry">
+		<template v-if="showManual || editingEntry || editingAddedEntry">
 			<!-- Food name: full width -->
 			<div class="food-entry-form__fields food-entry-form__fields--single">
 				<NcInputField v-model="form.foodName"
@@ -77,20 +153,33 @@
 					required />
 			</div>
 
-			<!-- kcal + amount side by side -->
-			<div class="food-entry-form__fields food-entry-form__fields--two">
+			<!-- kcal -->
+			<div class="food-entry-form__fields food-entry-form__fields--single">
 				<NcInputField v-model.number="form.caloriesPer100g"
 					type="number"
 					:label="t('calorietracker', '{energy} {per}', { energy: energyLabel, per: perWeightLabel })"
 					min="1"
 					required />
+			</div>
 
-				<NcInputField ref="amountField"
-					v-model.number="form.amountGrams"
-					type="number"
-					:label="t('calorietracker', 'Amount ({unit})', { unit: weightLabel })"
-					min="1"
-					required />
+			<!-- Amount + unit side by side -->
+			<div class="food-entry-form__fields food-entry-form__fields--two">
+				<div class="food-entry-form__field-wrap">
+					<label class="food-entry-form__select-label">{{ t('calorietracker', 'Amount') }}</label>
+					<NcInputField ref="amountField"
+						v-model.number="form.amount"
+						type="number"
+						min="1"
+						required />
+				</div>
+
+				<div class="food-entry-form__field-wrap">
+					<label class="food-entry-form__select-label">{{ t('calorietracker', 'Unit') }}</label>
+					<NcSelect v-model="selectedUnit"
+						:options="unitOptions"
+						:clearable="false"
+						label="label" />
+				</div>
 			</div>
 
 			<!-- Meal + date side by side -->
@@ -103,15 +192,18 @@
 						label="label" />
 				</div>
 
-				<NcDateTimePickerNative v-model="eatenAtDate"
-					type="date"
-					:label="t('calorietracker', 'Date')"
-					required />
+				<div class="food-entry-form__field-wrap">
+					<label class="food-entry-form__select-label">{{ t('calorietracker', 'Date') }}</label>
+					<NcDateTimePickerNative v-model="eatenAtDate"
+						type="date"
+						hide-label
+						required />
+				</div>
 			</div>
 
 			<!-- Calorie preview -->
-			<div v-if="form.caloriesPer100g > 0 && form.amountGrams > 0" class="food-entry-form__preview">
-				≈ {{ calculatedCalories }} {{ energyLabel }}
+			<div class="food-entry-form__preview">
+				≈ {{ form.caloriesPer100g > 0 && form.amount > 0 ? calculatedCalories : 0 }} {{ energyLabel }}
 			</div>
 
 			<!-- Macros: 3 columns -->
@@ -136,18 +228,31 @@
 			</div>
 		</template>
 
+		</div>
 		<div class="food-entry-form__actions">
-			<NcButton native-type="button" variant="tertiary" @click="store.closeAddModal()">
+			<NcButton variant="secondary"
+				@click="store.closeAddModal()">
 				{{ t('calorietracker', 'Cancel') }}
 			</NcButton>
-			<NcButton v-if="showManual || editingEntry"
-				native-type="submit"
+			<NcButton v-if="!showManual && !editingEntry"
+				variant="secondary"
+				@click="showManual = true">
+				{{ t('calorietracker', 'Add food manually') }}
+			</NcButton>
+			<span class="food-entry-form__actions-spacer" />
+			<NcButton v-if="addedEntries.length > 0 && !showManual && !editingEntry"
 				variant="primary"
-				:disabled="loading">
-				{{ editingEntry ? t('calorietracker', 'Save') : t('calorietracker', 'Add') }}
+				@click="store.closeAddModal()">
+				{{ t('calorietracker', 'Done') }}
+			</NcButton>
+			<NcButton v-if="showManual || editingEntry || editingAddedEntry"
+				variant="primary"
+				:disabled="loading || !canSubmit"
+				@click="submit">
+				{{ editingEntry || editingAddedEntry ? t('calorietracker', 'Save') : t('calorietracker', 'Add') }}
 			</NcButton>
 		</div>
-	</form>
+	</div>
 </template>
 
 <script setup>
@@ -158,15 +263,26 @@ import NcButton from '@nextcloud/vue/components/NcButton'
 import NcInputField from '@nextcloud/vue/components/NcInputField'
 import NcSelect from '@nextcloud/vue/components/NcSelect'
 import NcDateTimePickerNative from '@nextcloud/vue/components/NcDateTimePickerNative'
+import NcFormBox from '@nextcloud/vue/components/NcFormBox'
+import NcFormBoxButton from '@nextcloud/vue/components/NcFormBoxButton'
+import NcIconSvgWrapper from '@nextcloud/vue/components/NcIconSvgWrapper'
+import RecipeSearch from './RecipeSearch.vue'
 import { useFoodEntriesStore } from '../stores/foodEntries.js'
 import { toLocalDateString } from '../utils/date.js'
 import { useUnits } from '../composables/useUnits.js'
+import { useCookbook } from '../composables/useCookbook.js'
 import offApi from '../services/OpenFoodFactsApi.js'
 import usdaApi from '../services/UsdaFdcApi.js'
+import foodItemApi from '../services/FoodItemApi.js'
 
 const store = useFoodEntriesStore()
 const { currentDate, editingEntry } = storeToRefs(store)
 const { energyLabel, weightLabel, perWeightLabel, displayWeight, toGrams, displayPer100g, toPer100g, displayEnergy, toKcal, isImperial } = useUnits()
+const { cookbookAvailable } = useCookbook()
+const activeTab = ref('food')
+
+const iconPencil = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20.71 7.04c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.37-.39-1.02-.39-1.41 0l-1.84 1.83 3.75 3.75M3 17.25V21h3.75L17.81 9.93l-3.75-3.75L3 17.25z"/></svg>'
+const iconTrash = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 4h-3.5l-1-1h-5l-1 1H5v2h14M6 19a2 2 0 002 2h8a2 2 0 002-2V7H6v12z"/></svg>'
 
 // Template ref
 const amountField = ref(null)
@@ -176,6 +292,13 @@ const loading = ref(false)
 const showManual = ref(false)
 const selectedSource = ref(null)
 const selectedExternalId = ref(null)
+const addedEntries = ref([])
+const editingAddedEntry = ref(null)
+
+// Unit dropdown state
+const defaultUnitOptions = () => [{ value: 'g', label: weightLabel.value, gramsPerUnit: isImperial.value ? 28.35 : 1 }]
+const unitOptions = ref(defaultUnitOptions())
+const selectedUnit = ref(unitOptions.value[0])
 
 // Search state
 const searchQuery = ref('')
@@ -185,6 +308,9 @@ const searchDone = ref(false)
 const highlightedIndex = ref(-1)
 const searchDebounce = ref(null)
 const searchError = ref(false)
+const searchWarning = ref('')
+const frequentFoods = ref([])
+const frequentLoaded = ref(false)
 
 /**
  *
@@ -193,13 +319,21 @@ function defaultForm() {
 	return {
 		foodName: '',
 		caloriesPer100g: '',
-		amountGrams: '',
+		amount: '',
 		mealType: 'breakfast',
 		eatenAt: currentDate.value ?? toLocalDateString(),
 		proteinPer100g: '',
 		carbsPer100g: '',
 		fatPer100g: '',
 	}
+}
+
+/**
+ * Reset unit options to the default (grams only).
+ */
+function resetUnits() {
+	unitOptions.value = defaultUnitOptions()
+	selectedUnit.value = unitOptions.value[0]
 }
 
 /**
@@ -210,7 +344,7 @@ function entryToForm(entry) {
 	return {
 		foodName: entry.foodName,
 		caloriesPer100g: entry.caloriesPer100g != null ? displayEnergy(displayPer100g(entry.caloriesPer100g)) : '',
-		amountGrams: entry.amountGrams != null ? displayWeight(entry.amountGrams) : '',
+		amount: entry.amountGrams != null ? displayWeight(entry.amountGrams) : '',
 		mealType: entry.mealType,
 		eatenAt: entry.eatenAt,
 		proteinPer100g: entry.proteinPer100g != null ? displayPer100g(entry.proteinPer100g) : '',
@@ -223,13 +357,42 @@ const form = reactive(defaultForm())
 
 watch(editingEntry, (entry) => {
 	Object.assign(form, entry ? entryToForm(entry) : defaultForm())
+	resetUnits()
 	showManual.value = false
+	addedEntries.value = []
+	editingAddedEntry.value = null
+	if (!entry && !frequentLoaded.value) {
+		fetchFrequentFoods()
+	}
 }, { immediate: true })
+
+/**
+ * Load the user's frequently used food items.
+ */
+async function fetchFrequentFoods() {
+	try {
+		frequentFoods.value = await foodItemApi.getFrequent(8)
+		frequentLoaded.value = true
+	} catch (error) {
+		console.error('Failed to load frequent foods:', error)
+	}
+}
+
+const canSubmit = computed(() => {
+	return form.foodName.trim() !== '' && form.caloriesPer100g > 0 && form.amount > 0
+})
+
+/**
+ * Convert the current form amount + unit to grams.
+ */
+function amountToGrams() {
+	return Number(form.amount) * (selectedUnit.value?.gramsPerUnit ?? 1)
+}
 
 const calculatedCalories = computed(() => {
 	// Form values are in display units; convert to metric for the preview
 	const kcalPer100g = toPer100g(toKcal(form.caloriesPer100g))
-	const grams = toGrams(form.amountGrams)
+	const grams = amountToGrams()
 	const kcal = Math.round(kcalPer100g * grams / 100)
 	return displayEnergy(kcal)
 })
@@ -266,6 +429,7 @@ const eatenAtDate = computed({
 function onSearchInput() {
 	highlightedIndex.value = -1
 	searchError.value = false
+	searchWarning.value = ''
 	clearTimeout(searchDebounce.value)
 	if (searchQuery.value.length < 2) {
 		searchResults.value = []
@@ -276,12 +440,55 @@ function onSearchInput() {
 }
 
 /**
+ * Score a result by how closely its name matches the query.
+ * Lower score = better match.
+ * @param {string} name Food name
+ * @param {string} query Search query
+ * @return {number} Relevance score
+ */
+function matchScore(name, query) {
+	const n = name.toLowerCase()
+	const q = query.toLowerCase().trim()
+	const words = q.split(/\s+/)
+
+	// Exact match
+	if (n === q) return 0
+	// Name starts with query
+	if (n.startsWith(q)) return 1
+	// Name contains query as substring
+	if (n.includes(q)) return 2
+	// All query words present
+	const allPresent = words.every(w => n.includes(w))
+	if (allPresent) {
+		// Prefer shorter names (more specific matches)
+		return 3 + n.length / 1000
+	}
+	// Some words present
+	const matched = words.filter(w => n.includes(w)).length
+	return 4 + (1 - matched / words.length) + n.length / 1000
+}
+
+/**
+ * Rank merged search results by relevance to the query.
+ * @param {Array} results Combined results from all sources
+ * @param {string} query Search query
+ * @return {Array} Sorted results
+ */
+function rankResults(results, query) {
+	return results
+		.map(r => ({ ...r, _score: matchScore(r.name, query) }))
+		.sort((a, b) => a._score - b._score)
+		.map(({ _score, ...r }) => r)
+}
+
+/**
  *
  */
 async function runSearch() {
 	searchLoading.value = true
 	searchDone.value = false
 	searchError.value = false
+	searchWarning.value = ''
 	try {
 		const [usdaRes, offRes] = await Promise.allSettled([
 			usdaApi.search(searchQuery.value),
@@ -293,15 +500,54 @@ async function runSearch() {
 		if (offRes.status === 'rejected') {
 			console.error('OFF search failed:', offRes.reason)
 		}
-		searchResults.value = [
+		const merged = [
 			...(usdaRes.status === 'fulfilled' ? usdaRes.value : []),
 			...(offRes.status === 'fulfilled' ? offRes.value : []),
 		]
-		searchError.value = usdaRes.status === 'rejected' && offRes.status === 'rejected'
+		searchResults.value = rankResults(merged, searchQuery.value)
+		const bothFailed = usdaRes.status === 'rejected' && offRes.status === 'rejected'
+		searchError.value = bothFailed
+		if (!bothFailed && usdaRes.status === 'rejected') {
+			searchWarning.value = t('calorietracker', 'USDA database unavailable — showing Open Food Facts results only.')
+		} else if (!bothFailed && offRes.status === 'rejected') {
+			searchWarning.value = t('calorietracker', 'Open Food Facts unavailable — showing USDA results only.')
+		}
 		searchDone.value = true
 	} finally {
 		searchLoading.value = false
 	}
+}
+
+/**
+ * Handle a recipe selection from the RecipeSearch component.
+ * Populates the form and switches to manual entry mode.
+ * @param {object} recipe Recipe data with nutrition
+ */
+function onRecipeSelect(recipe) {
+	form.foodName = recipe.name
+	// Recipe nutrition is per serving — stored as per-100g so that amount=100g gives 1 serving
+	form.caloriesPer100g = displayEnergy(recipe.caloriesPer100g)
+	form.proteinPer100g = recipe.proteinPer100g ?? ''
+	form.carbsPer100g = recipe.carbsPer100g ?? ''
+	form.fatPer100g = recipe.fatPer100g ?? ''
+	selectedSource.value = recipe.source ?? 'cookbook'
+	selectedExternalId.value = recipe.externalId ?? null
+
+	// Build unit options: serving (= 100g internally) + grams
+	const servings = parseInt(String(recipe.recipeYield), 10) || null
+	const servingLabel = servings
+		? t('calorietracker', 'serving (makes {count})', { count: servings })
+		: t('calorietracker', 'serving')
+	const servingOption = {
+		value: 'serving',
+		label: servingLabel,
+		gramsPerUnit: 100,
+	}
+	unitOptions.value = [servingOption, ...defaultUnitOptions()]
+	selectedUnit.value = servingOption
+	form.amount = 1
+
+	showManual.value = true
 }
 
 /**
@@ -316,6 +562,22 @@ function selectResult(result) {
 	form.fatPer100g = result.fatPer100g != null ? displayPer100g(result.fatPer100g) : ''
 	selectedSource.value = result.source ?? null
 	selectedExternalId.value = result.externalId ?? null
+
+	// Build unit options: always include grams, add serving if available
+	const options = defaultUnitOptions()
+	if (result.servingSizeGrams && result.servingSizeGrams > 0) {
+		const desc = result.servingDescription
+			? t('calorietracker', 'serving ({desc})', { desc: result.servingDescription })
+			: t('calorietracker', 'serving ({grams}{unit})', { grams: displayWeight(result.servingSizeGrams), unit: weightLabel.value })
+		options.push({
+			value: 'serving',
+			label: desc,
+			gramsPerUnit: result.servingSizeGrams,
+		})
+	}
+	unitOptions.value = options
+	selectedUnit.value = options[0]
+
 	showManual.value = true
 	closeSearch()
 	nextTick(() => {
@@ -331,6 +593,7 @@ function closeSearch() {
 	searchResults.value = []
 	searchDone.value = false
 	searchError.value = false
+	searchWarning.value = ''
 	highlightedIndex.value = -1
 }
 
@@ -371,10 +634,11 @@ function selectHighlighted() {
  */
 function toPayload() {
 	const nullIfEmpty = (v) => v === '' ? null : v
+	const { amount, ...rest } = form
 	return {
-		...form,
+		...rest,
 		caloriesPer100g: toPer100g(toKcal(Number(form.caloriesPer100g))),
-		amountGrams: toGrams(Number(form.amountGrams)),
+		amountGrams: Math.round(amountToGrams()),
 		proteinPer100g: nullIfEmpty(form.proteinPer100g) !== null ? toPer100g(Number(form.proteinPer100g)) : null,
 		carbsPer100g: nullIfEmpty(form.carbsPer100g) !== null ? toPer100g(Number(form.carbsPer100g)) : null,
 		fatPer100g: nullIfEmpty(form.fatPer100g) !== null ? toPer100g(Number(form.fatPer100g)) : null,
@@ -392,38 +656,96 @@ async function submit() {
 				id: editingEntry.value.id,
 				...toPayload(),
 			})
-		} else {
-			await store.addEntry({
+			store.closeAddModal()
+		} else if (editingAddedEntry.value) {
+			// Re-saving a previously added entry
+			await store.updateEntry({
+				id: editingAddedEntry.value.id,
 				...toPayload(),
+			})
+			// Replace the old version in the addedEntries list
+			const updated = { ...editingAddedEntry.value, ...toPayload() }
+			const idx = addedEntries.value.findIndex(e => e.id === editingAddedEntry.value.id)
+			if (idx !== -1) addedEntries.value.splice(idx, 1, updated)
+			editingAddedEntry.value = null
+			Object.assign(form, defaultForm())
+			resetUnits()
+			showManual.value = false
+		} else {
+			const payload = toPayload()
+			const entry = await store.addEntry({
+				...payload,
 				source: selectedSource.value,
 				externalId: selectedExternalId.value,
 			})
+			// Remember the added entry and reset to search view
+			addedEntries.value.push(entry)
+			Object.assign(form, defaultForm())
+			resetUnits()
+			showManual.value = false
+			selectedSource.value = null
+			selectedExternalId.value = null
 		}
-		store.closeAddModal()
 	} finally {
 		loading.value = false
 	}
+}
+
+
+/**
+ * Edit a previously added entry: populate the form and switch to manual mode.
+ * @param {object} entry The added entry to edit
+ */
+function editAddedEntry(entry) {
+	Object.assign(form, entryToForm(entry))
+	resetUnits()
+	selectedSource.value = entry.source ?? null
+	selectedExternalId.value = entry.externalId ?? null
+	editingAddedEntry.value = entry
+	showManual.value = true
+}
+
+/**
+ * Delete an added entry from the server and the local list.
+ * @param {object} entry The added entry to delete
+ */
+async function deleteAddedEntry(entry) {
+	await store.deleteEntry(entry.id)
+	addedEntries.value = addedEntries.value.filter(e => e.id !== entry.id)
 }
 </script>
 
 <style scoped>
 .food-entry-form {
-	max-width: 560px;
+	display: flex;
+	flex-direction: column;
+	flex: 1;
+	min-height: 0;
+	width: 100%;
 	margin: 0 auto;
-	padding: 40px 24px 24px;
+	padding: 0 20px 16px;
+	box-sizing: border-box;
+	overflow: hidden;
+}
+
+.food-entry-form__scroll {
+	flex: 1;
+	overflow-y: auto;
+	overflow-x: hidden;
+	padding-top: 20px;
 }
 
 .food-entry-form__title {
-	margin: 0 0 28px;
-	font-size: 1.4em;
+	margin: 0 0 12px;
+	font-size: 1.15em;
 	font-weight: bold;
 	text-align: center;
 }
 
 .food-entry-form__fields {
 	display: grid;
-	gap: 16px;
-	margin-bottom: 16px;
+	gap: 10px;
+	margin-bottom: 10px;
 }
 
 .food-entry-form__fields--single {
@@ -438,10 +760,29 @@ async function submit() {
 	grid-template-columns: 1fr 1fr 1fr;
 }
 
+
 .food-entry-form__field-wrap {
 	display: flex;
 	flex-direction: column;
 	gap: 4px;
+}
+
+/* Normalize NcInputField inside field-wrap: remove its built-in top margin */
+.food-entry-form__field-wrap :deep(.input-field) {
+	margin-block-start: 0;
+}
+
+/* Normalize NcSelect inside field-wrap: match NcInputField height and remove bottom margin */
+.food-entry-form__field-wrap :deep(.v-select.select) {
+	height: var(--default-clickable-area);
+	min-height: unset !important;
+	min-width: unset;
+	margin: 0;
+}
+
+.food-entry-form__field-wrap :deep(.vs__dropdown-toggle) {
+	height: 100% !important;
+	padding: var(--border-width-input-focused, 2px);
 }
 
 .food-entry-form__select-label {
@@ -458,40 +799,81 @@ async function submit() {
 	color: var(--color-text-maxcontrast);
 }
 
+.food-entry-form__added {
+	margin-bottom: 10px;
+}
+
+.food-entry-form__details {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 4px 12px;
+}
+
+.food-entry-form__detail {
+	display: inline-block;
+	white-space: nowrap;
+	min-width: 4em;
+}
+
+.food-entry-form__detail--energy {
+	min-width: 5.5em;
+	font-weight: 500;
+}
+
+.food-entry-form__detail--macro {
+	min-width: 4.5em;
+}
+
+.food-entry-form__added :deep(.form-box) {
+	width: 100%;
+}
+
+.food-entry-form__frequent {
+	margin-bottom: 10px;
+}
+
+.food-entry-form__frequent-list {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+}
+
+.food-entry-form__frequent-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 4px 10px;
+	border: 1px solid var(--color-border-dark);
+	border-radius: var(--border-radius-pill);
+	background: var(--color-background-soft);
+	color: var(--color-main-text);
+	font-size: 0.85em;
+	cursor: pointer;
+	transition: background 0.1s;
+}
+
+.food-entry-form__frequent-chip:hover {
+	background: var(--color-background-hover);
+}
+
+.food-entry-form__frequent-kcal {
+	font-size: 0.85em;
+	color: var(--color-text-maxcontrast);
+}
+
+.food-entry-form__tabs {
+	display: flex;
+	gap: 8px;
+	margin-bottom: 12px;
+}
+
 .food-entry-form__search {
-	margin-bottom: 16px;
+	margin-bottom: 10px;
 }
 
 .food-entry-form__search-input-row {
 	position: relative;
-}
-
-.food-entry-form__search-input {
-	width: 100%;
-	height: 34px;
-	padding: 0 8px;
-	border: 1px solid var(--color-border-dark);
-	border-radius: var(--border-radius);
-	background: var(--color-main-background);
-	color: var(--color-main-text);
-	font-size: 1em;
-	box-sizing: border-box;
-}
-
-.food-entry-form__search-spinner {
-	position: absolute;
-	right: 10px;
-	top: 9px;
-	width: 16px;
-	height: 16px;
-	border: 2px solid var(--color-border);
-	border-top-color: var(--color-primary-element);
-	border-radius: 50%;
-	animation: spin 0.6s linear infinite;
-}
-
-@keyframes spin {
-	to { transform: rotate(360deg); }
 }
 
 .food-entry-form__search-results {
@@ -506,16 +888,22 @@ async function submit() {
 
 .food-entry-form__search-result {
 	display: flex;
-	justify-content: space-between;
-	align-items: center;
-	padding: 8px 12px;
+	flex-direction: column;
+	padding: 6px 12px;
 	cursor: pointer;
-	gap: 8px;
+	gap: 2px;
 }
 
 .food-entry-form__search-result:hover,
 .food-entry-form__search-result--active {
 	background: var(--color-background-hover);
+}
+
+.food-entry-form__search-result-top {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: 8px;
 }
 
 .food-entry-form__search-result-name {
@@ -525,16 +913,19 @@ async function submit() {
 	white-space: nowrap;
 }
 
-.food-entry-form__search-result-meta {
+.food-entry-form__search-result-bottom {
 	display: flex;
 	align-items: center;
-	gap: 6px;
-	flex-shrink: 0;
+	gap: 8px;
+	font-size: 0.8em;
+	color: var(--color-text-maxcontrast);
 }
 
 .food-entry-form__search-result-kcal {
-	font-size: 0.85em;
-	color: var(--color-text-maxcontrast);
+	white-space: nowrap;
+}
+
+.food-entry-form__search-result-macro {
 	white-space: nowrap;
 }
 
@@ -573,8 +964,10 @@ async function submit() {
 	color: var(--color-error);
 }
 
-.food-entry-form__search-manual {
-	margin-top: 8px;
+.food-entry-form__search-warning {
+	margin: 4px 0 0;
+	font-size: 0.8em;
+	color: var(--color-warning-text, var(--color-text-maxcontrast));
 }
 
 .food-entry-form__preview {
@@ -585,8 +978,13 @@ async function submit() {
 
 .food-entry-form__actions {
 	display: flex;
+	flex-shrink: 0;
 	gap: 8px;
-	justify-content: flex-end;
-	margin-top: 16px;
+	padding-top: 12px;
+	border-top: 1px solid var(--color-border);
+}
+
+.food-entry-form__actions-spacer {
+	flex: 1;
 }
 </style>

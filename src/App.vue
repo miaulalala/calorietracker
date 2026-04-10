@@ -10,7 +10,8 @@
 			<router-view />
 		</NcAppContent>
 		<NcModal v-if="addModalOpen"
-			size="full"
+			size="normal"
+			class="add-food-modal"
 			:name="editingEntry ? t('calorietracker', 'Edit entry') : t('calorietracker', 'Add food')"
 			@close="store.closeAddModal()">
 			<AddFoodEntryForm />
@@ -33,3 +34,21 @@ import { useFoodEntriesStore } from './stores/foodEntries.js'
 const store = useFoodEntriesStore()
 const { addModalOpen, editingEntry } = storeToRefs(store)
 </script>
+
+<style>
+/* Fixed-size modal with internal scrolling */
+.add-food-modal .modal-container {
+	height: min(70vh, 100% - 2 * var(--header-height) - 2 * var(--body-container-margin)) !important;
+	overflow: hidden !important;
+	display: flex !important;
+	flex-direction: column !important;
+}
+
+.add-food-modal .modal-container__content {
+	flex: 1 !important;
+	min-height: 0 !important;
+	overflow: hidden !important;
+	display: flex !important;
+	flex-direction: column !important;
+}
+</style>
