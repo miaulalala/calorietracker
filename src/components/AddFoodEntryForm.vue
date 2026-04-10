@@ -36,7 +36,7 @@
 					role="listbox"
 					:aria-label="t('calorietracker', 'Search results')">
 					<li v-for="(result, i) in searchResults"
-						:key="i"
+						:key="result.source + ':' + (result.externalId ?? result.name)"
 						class="food-entry-form__search-result"
 						:class="{ 'food-entry-form__search-result--active': i === highlightedIndex }"
 						role="option"
