@@ -10,8 +10,26 @@
 				{{ editingEntry ? t('calorietracker', 'Edit entry') : t('calorietracker', 'Add food') }}
 			</h2>
 
+			<!-- Tab toggle — only when cookbook is available and not in edit/manual mode -->
+			<div v-if="cookbookAvailable && !editingEntry && !showManual" class="food-entry-form__tabs">
+				<NcButton :variant="activeTab === 'food' ? 'primary' : 'secondary'"
+					native-type="button"
+					@click="activeTab = 'food'">
+					{{ t('calorietracker', 'Food search') }}
+				</NcButton>
+				<NcButton :variant="activeTab === 'recipes' ? 'primary' : 'secondary'"
+					native-type="button"
+					@click="activeTab = 'recipes'">
+					{{ t('calorietracker', 'Recipes') }}
+				</NcButton>
+			</div>
+
+			<!-- Recipe search tab -->
+			<RecipeSearch v-if="cookbookAvailable && activeTab === 'recipes' && !editingEntry && !showManual"
+				@select="onRecipeSelect" />
+
 			<!-- Search — hidden in edit mode -->
-			<div v-if="!editingEntry && !showManual" class="food-entry-form__search">
+			<div v-if="!editingEntry && !showManual && activeTab === 'food'" class="food-entry-form__search">
 				<div class="food-entry-form__search-input-row">
 					<NcInputField v-model="searchQuery"
 						type="search"
@@ -71,7 +89,7 @@
 			</div>
 
 			<!-- Just-added entries — shown in add mode after submitting -->
-			<div v-if="!editingEntry && !showManual && addedEntries.length > 0" class="food-entry-form__added">
+			<div v-if="!editingEntry && !showManual && activeTab === 'food' && addedEntries.length > 0" class="food-entry-form__added">
 				<p class="food-entry-form__section-label">
 					{{ t('calorietracker', 'Added') }}
 				</p>
@@ -110,7 +128,7 @@
 			</div>
 
 			<!-- Frequently used foods — shown below search in add mode -->
-			<div v-if="!editingEntry && !showManual && frequentFoods.length > 0" class="food-entry-form__frequent">
+			<div v-if="!editingEntry && !showManual && activeTab === 'food' && frequentFoods.length > 0" class="food-entry-form__frequent">
 				<p class="food-entry-form__section-label">
 					{{ t('calorietracker', 'Frequently used') }}
 				</p>
@@ -257,9 +275,11 @@ import NcDateTimePickerNative from '@nextcloud/vue/components/NcDateTimePickerNa
 import NcFormBox from '@nextcloud/vue/components/NcFormBox'
 import NcFormBoxButton from '@nextcloud/vue/components/NcFormBoxButton'
 import NcIconSvgWrapper from '@nextcloud/vue/components/NcIconSvgWrapper'
+import RecipeSearch from './RecipeSearch.vue'
 import { useFoodEntriesStore } from '../stores/foodEntries.js'
 import { toLocalDateString } from '../utils/date.js'
 import { useUnits } from '../composables/useUnits.js'
+import { useCookbook } from '../composables/useCookbook.js'
 import offApi from '../services/OpenFoodFactsApi.js'
 import usdaApi from '../services/UsdaFdcApi.js'
 import foodItemApi from '../services/FoodItemApi.js'
@@ -267,6 +287,8 @@ import foodItemApi from '../services/FoodItemApi.js'
 const store = useFoodEntriesStore()
 const { currentDate, editingEntry } = storeToRefs(store)
 const { energyLabel, weightLabel, perWeightLabel, displayWeight, displayPer100g, toPer100g, displayEnergy, toKcal, isImperial, entryMacroGrams } = useUnits()
+const { cookbookAvailable } = useCookbook()
+const activeTab = ref('food')
 
 const iconPencil = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20.71 7.04c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.37-.39-1.02-.39-1.41 0l-1.84 1.83 3.75 3.75M3 17.25V21h3.75L17.81 9.93l-3.75-3.75L3 17.25z"/></svg>'
 const iconTrash = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 4h-3.5l-1-1h-5l-1 1H5v2h14M6 19a2 2 0 002 2h8a2 2 0 002-2V7H6v12z"/></svg>'
@@ -512,6 +534,37 @@ async function runSearch() {
 	} finally {
 		searchLoading.value = false
 	}
+}
+
+/**
+ * Handle a recipe selection from the RecipeSearch component.
+ * Populates the form and switches to manual entry mode.
+ * @param {object} recipe Recipe data with nutrition
+ */
+function onRecipeSelect(recipe) {
+	form.foodName = recipe.name
+	form.caloriesPer100g = displayEnergy(displayPer100g(recipe.caloriesPer100g))
+	form.proteinPer100g = recipe.proteinPer100g != null ? displayPer100g(recipe.proteinPer100g) : ''
+	form.carbsPer100g = recipe.carbsPer100g != null ? displayPer100g(recipe.carbsPer100g) : ''
+	form.fatPer100g = recipe.fatPer100g != null ? displayPer100g(recipe.fatPer100g) : ''
+	selectedSource.value = recipe.source ?? 'cookbook'
+	selectedExternalId.value = recipe.externalId ?? null
+
+	// Build unit options: serving (= 100g internally) + base weight unit
+	const servings = parseInt(String(recipe.recipeYield), 10) || null
+	const servingLabel = servings
+		? t('calorietracker', 'serving (makes {count})', { count: servings })
+		: t('calorietracker', 'serving')
+	const servingOption = {
+		value: 'serving',
+		label: servingLabel,
+		gramsPerUnit: 100,
+	}
+	unitOptions.value = [servingOption, ...defaultUnitOptions()]
+	selectedUnit.value = servingOption
+	form.amount = 1
+
+	showManual.value = true
 }
 
 /**
@@ -832,6 +885,12 @@ async function deleteAddedEntry(entry) {
 .food-entry-form__frequent-kcal {
 	font-size: 0.85em;
 	color: var(--color-text-maxcontrast);
+}
+
+.food-entry-form__tabs {
+	display: flex;
+	gap: 8px;
+	margin-bottom: 12px;
 }
 
 .food-entry-form__search {

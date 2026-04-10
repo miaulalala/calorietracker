@@ -7,6 +7,9 @@ import { loadState } from '@nextcloud/initial-state'
 
 const cookbookAvailable = loadState('calorietracker', 'cookbook-available', false)
 
+/**
+ *
+ */
 export function useCookbook() {
 	return {
 		cookbookAvailable,

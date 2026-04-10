@@ -53,9 +53,14 @@ class CookbookController extends Controller {
 				if (!is_array($recipe)) {
 					continue;
 				}
+				$id = (int)($recipe['recipe_id'] ?? 0);
+				$name = trim((string)($recipe['name'] ?? ''));
+				if ($id <= 0 || $name === '') {
+					continue;
+				}
 				$results[] = [
-					'id' => (int)($recipe['recipe_id'] ?? 0),
-					'name' => $recipe['name'] ?? '',
+					'id' => $id,
+					'name' => $name,
 					'imageUrl' => $recipe['imageUrl'] ?? null,
 				];
 			}
@@ -128,20 +133,30 @@ class CookbookController extends Controller {
 			$fat = $this->request->getParam('fat');
 			$servingSize = $this->request->getParam('servingSize');
 
+			// Validate that numeric fields are actually numeric
+			foreach (['calories' => $calories, 'protein' => $protein, 'carbs' => $carbs, 'fat' => $fat] as $field => $value) {
+				if ($value !== null && !is_numeric($value)) {
+					return new JSONResponse(
+						['error' => "Invalid value for '$field': must be numeric"],
+						Http::STATUS_BAD_REQUEST,
+					);
+				}
+			}
+
 			if ($calories !== null) {
-				$nutrition['calories'] = $calories . ' kcal';
+				$nutrition['calories'] = round((float)$calories) . ' kcal';
 			}
 			if ($protein !== null) {
-				$nutrition['proteinContent'] = $protein . ' g';
+				$nutrition['proteinContent'] = round((float)$protein, 1) . ' g';
 			}
 			if ($carbs !== null) {
-				$nutrition['carbohydrateContent'] = $carbs . ' g';
+				$nutrition['carbohydrateContent'] = round((float)$carbs, 1) . ' g';
 			}
 			if ($fat !== null) {
-				$nutrition['fatContent'] = $fat . ' g';
+				$nutrition['fatContent'] = round((float)$fat, 1) . ' g';
 			}
 			if ($servingSize !== null) {
-				$nutrition['servingSize'] = $servingSize;
+				$nutrition['servingSize'] = (string)$servingSize;
 			}
 
 			$recipe['nutrition'] = $nutrition;
@@ -185,10 +200,15 @@ class CookbookController extends Controller {
 			'timeout' => $timeout,
 		];
 
-		// When allow_local_remote_servers is enabled (typical for dev/docker setups
-		// with self-signed certs), skip TLS verification for loopback requests.
+		// When allow_local_remote_servers is enabled and the target host is
+		// loopback or private (typical for dev/docker setups with self-signed
+		// certs), skip TLS verification.
 		if ($this->config->getSystemValueBool('allow_local_remote_servers', false)) {
-			$options['verify'] = false;
+			$baseUrl = $this->urlGenerator->getBaseUrl();
+			$host = parse_url($baseUrl, PHP_URL_HOST) ?: '';
+			if ($this->isLocalHost($host)) {
+				$options['verify'] = false;
+			}
 		}
 
 		return $options;
@@ -236,13 +256,10 @@ class CookbookController extends Controller {
 			'Accept' => 'application/json',
 		];
 
-		// Forward the session cookie from the incoming request
-		if (!empty($_COOKIE)) {
-			$cookieParts = [];
-			foreach ($_COOKIE as $name => $value) {
-				$cookieParts[] = $name . '=' . $value;
-			}
-			$headers['Cookie'] = implode('; ', $cookieParts);
+		// Forward the cookie header from the incoming request
+		$cookieHeader = $this->request->getHeader('Cookie');
+		if ($cookieHeader !== '') {
+			$headers['Cookie'] = $cookieHeader;
 		}
 
 		// Forward the requesttoken for CSRF protection
@@ -252,5 +269,23 @@ class CookbookController extends Controller {
 		}
 
 		return $headers;
+	}
+
+	/**
+	 * Check whether a hostname resolves to a loopback or private address.
+	 */
+	private function isLocalHost(string $host): bool {
+		if ($host === 'localhost' || $host === '127.0.0.1' || $host === '::1') {
+			return true;
+		}
+
+		$ip = gethostbyname($host);
+		if ($ip === $host) {
+			// Resolution failed — treat as non-local
+			return false;
+		}
+
+		// Check RFC 1918 / loopback ranges
+		return filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_RES_RANGE | FILTER_FLAG_NO_PRIV_RANGE) === false;
 	}
 }

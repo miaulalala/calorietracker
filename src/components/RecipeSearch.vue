@@ -9,30 +9,44 @@
 			type="search"
 			:label="t('calorietracker', 'Search recipes')"
 			:placeholder="t('calorietracker', 'e.g. Pasta, Salad, Soup…')"
+			role="combobox"
+			:aria-expanded="results.length > 0"
+			aria-autocomplete="list"
+			aria-controls="recipe-search-results"
 			autocomplete="off"
 			:loading="searchLoading"
-			@input="onSearchInput" />
+			@input="onSearchInput"
+			@keydown.down.prevent="highlightNext"
+			@keydown.up.prevent="highlightPrev"
+			@keydown.enter.prevent="selectHighlighted"
+			@keydown.esc="closeSearch"
+			@blur="onSearchBlur" />
 
 		<div v-if="searchLoading && results.length === 0" class="recipe-search__status">
 			<p>{{ t('calorietracker', 'Searching recipes…') }}</p>
 		</div>
 
 		<div v-else-if="searchError" class="recipe-search__status">
-			<p class="recipe-search__error">{{ t('calorietracker', 'Could not search recipes. Is the Cookbook app working?') }}</p>
+			<p class="recipe-search__error">
+				{{ t('calorietracker', 'Could not search recipes. Is the Cookbook app working?') }}
+			</p>
 		</div>
 
-		<div v-else-if="searchDone && results.length === 0 && searchQuery.length >= 2" class="recipe-search__status">
+		<div v-else-if="searchDone && results.length === 0 && searchQuery.trim().length >= 2" class="recipe-search__status">
 			<p>{{ t('calorietracker', 'No recipes found.') }}</p>
 		</div>
 
 		<ul v-if="results.length > 0"
+			id="recipe-search-results"
 			class="recipe-search__results"
 			role="listbox"
 			:aria-label="t('calorietracker', 'Recipe results')">
-			<li v-for="recipe in results"
+			<li v-for="(recipe, i) in results"
 				:key="recipe.id"
 				class="recipe-search__result"
+				:class="{ 'recipe-search__result--active': i === highlightedIndex }"
 				role="option"
+				:aria-selected="i === highlightedIndex"
 				@mousedown.prevent="selectRecipe(recipe)">
 				<span class="recipe-search__result-name">{{ recipe.name }}</span>
 			</li>
@@ -40,7 +54,9 @@
 
 		<!-- Recipe detail / estimation view -->
 		<div v-if="selectedRecipe" class="recipe-search__detail">
-			<h3 class="recipe-search__detail-name">{{ selectedRecipe.name }}</h3>
+			<h3 class="recipe-search__detail-name">
+				{{ selectedRecipe.name }}
+			</h3>
 
 			<div v-if="estimating" class="recipe-search__status">
 				<NcLoadingIcon :size="28" />
@@ -49,7 +65,9 @@
 
 			<template v-else>
 				<div v-if="selectedRecipe.caloriesPer100g != null" class="recipe-search__nutrition">
-					<p class="recipe-search__section-label">{{ t('calorietracker', 'Nutrition per serving') }}</p>
+					<p class="recipe-search__section-label">
+						{{ t('calorietracker', 'Nutrition per serving') }}
+					</p>
 					<div class="recipe-search__nutrition-grid">
 						<span>{{ displayEnergy(selectedRecipe.caloriesPer100g) }} {{ energyLabel }}</span>
 						<span v-if="selectedRecipe.proteinPer100g != null">P {{ selectedRecipe.proteinPer100g }}g</span>
@@ -59,7 +77,9 @@
 				</div>
 
 				<div v-if="estimationError" class="recipe-search__status">
-					<p class="recipe-search__error">{{ estimationError }}</p>
+					<p class="recipe-search__error">
+						{{ estimationError }}
+					</p>
 				</div>
 
 				<div class="recipe-search__detail-actions">
@@ -103,6 +123,7 @@ const searchLoading = ref(false)
 const searchDone = ref(false)
 const searchError = ref(false)
 const searchDebounce = ref(null)
+const highlightedIndex = ref(-1)
 const selectedRecipe = ref(null)
 const estimating = ref(false)
 const estimationError = ref('')
@@ -111,14 +132,58 @@ const estimationError = ref('')
  *
  */
 function onSearchInput() {
+	highlightedIndex.value = -1
 	searchError.value = false
 	clearTimeout(searchDebounce.value)
-	if (searchQuery.value.length < 2) {
+	if (searchQuery.value.trim().length < 2) {
 		results.value = []
 		searchDone.value = false
 		return
 	}
 	searchDebounce.value = setTimeout(() => runSearch(), 600)
+}
+
+/**
+ *
+ */
+function highlightNext() {
+	if (results.value.length === 0) return
+	highlightedIndex.value = (highlightedIndex.value + 1) % results.value.length
+}
+
+/**
+ *
+ */
+function highlightPrev() {
+	if (results.value.length === 0) return
+	highlightedIndex.value = (highlightedIndex.value - 1 + results.value.length) % results.value.length
+}
+
+/**
+ *
+ */
+function selectHighlighted() {
+	if (highlightedIndex.value >= 0 && results.value[highlightedIndex.value]) {
+		selectRecipe(results.value[highlightedIndex.value])
+	}
+}
+
+/**
+ *
+ */
+function closeSearch() {
+	searchQuery.value = ''
+	results.value = []
+	searchDone.value = false
+	searchError.value = false
+	highlightedIndex.value = -1
+}
+
+/**
+ *
+ */
+function onSearchBlur() {
+	setTimeout(() => closeSearch(), 200)
 }
 
 /**
@@ -145,6 +210,7 @@ async function runSearch() {
 
 /**
  *
+ * @param recipe
  */
 async function selectRecipe(recipe) {
 	selectedRecipe.value = null
@@ -262,7 +328,8 @@ function useRecipe() {
 	cursor: pointer;
 }
 
-.recipe-search__result:hover {
+.recipe-search__result:hover,
+.recipe-search__result--active {
 	background: var(--color-background-hover);
 }
 

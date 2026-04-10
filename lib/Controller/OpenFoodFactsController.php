@@ -246,11 +246,17 @@ class OpenFoodFactsController extends Controller {
 						? (int) round((float) $n['fat_100g']) : null,
 				];
 
-				// Include serving size when available (OFF provides serving_quantity in grams)
-				$servingGrams = isset($product['serving_quantity']) ? (float) $product['serving_quantity'] : null;
-				if ($servingGrams !== null && $servingGrams > 0) {
-					$result['servingSizeGrams'] = round($servingGrams, 1);
-					$result['servingDescription'] = $product['serving_size'] ?? null;
+				// Include serving size when available.
+				// OFF's serving_quantity is numeric but may be ml or other units;
+				// only use it when the serving_size string indicates grams.
+				$servingSize = $product['serving_size'] ?? '';
+				$servingQty = isset($product['serving_quantity']) ? (float) $product['serving_quantity'] : null;
+				if ($servingQty !== null && $servingQty > 0) {
+					$isGrams = $servingSize === '' || (bool) preg_match('/\bg\b|gram/i', $servingSize);
+					if ($isGrams) {
+						$result['servingSizeGrams'] = round($servingQty, 1);
+						$result['servingDescription'] = $servingSize ?: null;
+					}
 				}
 
 				$results[] = $result;

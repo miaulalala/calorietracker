@@ -103,7 +103,7 @@ function parseQuantity(str) {
  */
 export function parseIngredient(ingredient) {
 	// Strip parenthetical notes and leading/trailing punctuation
-	let text = ingredient
+	const text = ingredient
 		.replace(/\(.*?\)/g, '')
 		.replace(/,\s*$/, '')
 		.trim()
@@ -189,6 +189,9 @@ export async function estimateRecipeNutrition(ingredients, recipeYield) {
 	let totalCarbs = 0
 	let totalFat = 0
 	let foundCount = 0
+	let hasProtein = false
+	let hasCarbs = false
+	let hasFat = false
 
 	for (let i = 0; i < parsed.length; i++) {
 		const result = lookups[i]
@@ -199,9 +202,18 @@ export async function estimateRecipeNutrition(ingredients, recipeYield) {
 		const factor = grams / 100
 
 		totalKcal += (nutrition.caloriesPer100g || 0) * factor
-		totalProtein += (nutrition.proteinPer100g || 0) * factor
-		totalCarbs += (nutrition.carbsPer100g || 0) * factor
-		totalFat += (nutrition.fatPer100g || 0) * factor
+		if (nutrition.proteinPer100g != null) {
+			totalProtein += nutrition.proteinPer100g * factor
+			hasProtein = true
+		}
+		if (nutrition.carbsPer100g != null) {
+			totalCarbs += nutrition.carbsPer100g * factor
+			hasCarbs = true
+		}
+		if (nutrition.fatPer100g != null) {
+			totalFat += nutrition.fatPer100g * factor
+			hasFat = true
+		}
 		foundCount++
 	}
 
@@ -212,9 +224,9 @@ export async function estimateRecipeNutrition(ingredients, recipeYield) {
 	// Per-serving values (stored as "per serving" not "per 100g" for recipes)
 	return {
 		caloriesPer100g: Math.round(totalKcal / servings),
-		proteinPer100g: Math.round(totalProtein / servings),
-		carbsPer100g: Math.round(totalCarbs / servings),
-		fatPer100g: Math.round(totalFat / servings),
+		proteinPer100g: hasProtein ? Math.round(totalProtein / servings) : null,
+		carbsPer100g: hasCarbs ? Math.round(totalCarbs / servings) : null,
+		fatPer100g: hasFat ? Math.round(totalFat / servings) : null,
 		servingSize: `1/${servings} of recipe`,
 	}
 }
