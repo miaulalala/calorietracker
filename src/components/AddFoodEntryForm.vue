@@ -593,7 +593,7 @@ function toPayload() {
 	return {
 		...rest,
 		caloriesPer100g: toPer100g(toKcal(Number(form.caloriesPer100g))),
-		amountGrams: Math.round(amountToGrams()),
+		amountGrams: Math.max(1, Math.round(amountToGrams())),
 		proteinPer100g: nullIfEmpty(form.proteinPer100g) !== null ? toPer100g(Number(form.proteinPer100g)) : null,
 		carbsPer100g: nullIfEmpty(form.carbsPer100g) !== null ? toPer100g(Number(form.carbsPer100g)) : null,
 		fatPer100g: nullIfEmpty(form.fatPer100g) !== null ? toPer100g(Number(form.fatPer100g)) : null,
