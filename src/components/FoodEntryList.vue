@@ -16,22 +16,22 @@
 
 		<template v-for="mealType in mealOrder">
 			<div v-if="groups[mealType].length > 0" :key="mealType" class="food-entry-list__group">
-				<button class="food-entry-list__meal-heading"
-					type="button"
-					role="heading"
-					aria-level="4"
-					:aria-expanded="!collapsed[mealType]"
-					@click="collapsed[mealType] = !collapsed[mealType]">
-					<span class="food-entry-list__chevron"
-						:class="{ 'food-entry-list__chevron--collapsed': collapsed[mealType] }">
-						<NcIconSvgWrapper :svg="iconChevronDown" />
-					</span>
-					{{ mealLabel(mealType) }}
-					<span class="food-entry-list__meal-count">{{ groups[mealType].length }}</span>
-					<span class="food-entry-list__meal-total">
-						{{ mealTotal(groups[mealType]) }} {{ energyLabel }}
-					</span>
-				</button>
+				<h4 class="food-entry-list__meal-heading-wrapper">
+					<button class="food-entry-list__meal-heading"
+						type="button"
+						:aria-expanded="!collapsed[mealType]"
+						@click="collapsed[mealType] = !collapsed[mealType]">
+						<span class="food-entry-list__chevron"
+							:class="{ 'food-entry-list__chevron--collapsed': collapsed[mealType] }">
+							<NcIconSvgWrapper :svg="iconChevronDown" />
+						</span>
+						{{ mealLabel(mealType) }}
+						<span class="food-entry-list__meal-count">{{ groups[mealType].length }}</span>
+						<span class="food-entry-list__meal-total">
+							{{ mealTotal(groups[mealType]) }} {{ energyLabel }}
+						</span>
+					</button>
+				</h4>
 				<hr class="food-entry-list__separator">
 
 				<NcFormBox v-show="!collapsed[mealType]">
@@ -203,6 +203,12 @@ async function doDelete() {
 	margin-bottom: 20px;
 }
 
+.food-entry-list__meal-heading-wrapper {
+	margin: 0;
+	font-size: 1em;
+	font-weight: bold;
+}
+
 .food-entry-list__meal-heading {
 	display: flex;
 	align-items: center;
@@ -212,8 +218,7 @@ async function doDelete() {
 	padding: 0;
 	border: none;
 	background: none;
-	font-size: 1em;
-	font-weight: bold;
+	font: inherit;
 	text-transform: capitalize;
 	color: var(--color-main-text);
 	cursor: pointer;

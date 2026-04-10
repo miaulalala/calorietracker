@@ -279,7 +279,8 @@ const addedEntries = ref([])
 const editingAddedEntry = ref(null)
 
 // Unit dropdown state
-const defaultUnitOptions = () => [{ value: 'g', label: weightLabel.value, gramsPerUnit: isImperial.value ? 28.35 : 1 }]
+const GRAMS_PER_OZ = 28.3495
+const defaultUnitOptions = () => [{ value: 'g', label: weightLabel.value, gramsPerUnit: isImperial.value ? GRAMS_PER_OZ : 1 }]
 const unitOptions = ref(defaultUnitOptions())
 const selectedUnit = ref(unitOptions.value[0])
 
