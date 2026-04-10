@@ -154,8 +154,8 @@
 							v-model.number="form.amount"
 							input-id="food-entry-amount"
 							type="number"
-							min="0.01"
-							step="any"
+							:min="selectedUnit?.value === 'g' ? '1' : '0.01'"
+							:step="selectedUnit?.value === 'g' ? '1' : 'any'"
 							required />
 					</div>
 
@@ -284,7 +284,7 @@ const editingAddedEntry = ref(null)
 
 // Unit dropdown state
 const GRAMS_PER_OZ = 28.3495
-const defaultUnitOptions = () => [{ value: 'g', label: weightLabel.value, gramsPerUnit: isImperial.value ? GRAMS_PER_OZ : 1 }]
+const defaultUnitOptions = () => [{ value: isImperial.value ? 'oz' : 'g', label: weightLabel.value, gramsPerUnit: isImperial.value ? GRAMS_PER_OZ : 1 }]
 const unitOptions = ref(defaultUnitOptions())
 const selectedUnit = ref(unitOptions.value[0])
 
@@ -317,7 +317,7 @@ function defaultForm() {
 }
 
 /**
- * Reset unit options to the default (grams only).
+ * Reset unit options to the default base unit for the current measurement system.
  */
 function resetUnits() {
 	unitOptions.value = defaultUnitOptions()
