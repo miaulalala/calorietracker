@@ -22,18 +22,20 @@
 			@keydown.esc="closeSearch"
 			@blur="onSearchBlur" />
 
-		<div v-if="searchLoading && results.length === 0" class="recipe-search__status">
-			<p>{{ t('calorietracker', 'Searching recipes…') }}</p>
-		</div>
+		<div aria-live="polite">
+			<div v-if="searchLoading && results.length === 0" class="recipe-search__status">
+				<p>{{ t('calorietracker', 'Searching recipes…') }}</p>
+			</div>
 
-		<div v-else-if="searchError" class="recipe-search__status">
-			<p class="recipe-search__error">
-				{{ t('calorietracker', 'Could not search recipes. Is the Cookbook app working?') }}
-			</p>
-		</div>
+			<div v-else-if="searchError" class="recipe-search__status">
+				<p class="recipe-search__error">
+					{{ t('calorietracker', 'Could not search recipes. Is the Cookbook app working?') }}
+				</p>
+			</div>
 
-		<div v-else-if="searchDone && results.length === 0 && searchQuery.trim().length >= 2" class="recipe-search__status">
-			<p>{{ t('calorietracker', 'No recipes found.') }}</p>
+			<div v-else-if="searchDone && results.length === 0 && searchQuery.trim().length >= 2" class="recipe-search__status">
+				<p>{{ t('calorietracker', 'No recipes found.') }}</p>
+			</div>
 		</div>
 
 		<ul v-if="results.length > 0 && !selectedRecipe"
@@ -70,9 +72,9 @@
 					</p>
 					<div class="recipe-search__nutrition-grid">
 						<span>{{ displayEnergy(selectedRecipe.caloriesPerServing) }} {{ energyLabel }}</span>
-						<span v-if="selectedRecipe.proteinPerServing != null">P {{ selectedRecipe.proteinPerServing }}g</span>
-						<span v-if="selectedRecipe.carbsPerServing != null">C {{ selectedRecipe.carbsPerServing }}g</span>
-						<span v-if="selectedRecipe.fatPerServing != null">F {{ selectedRecipe.fatPerServing }}g</span>
+						<span v-if="selectedRecipe.proteinPerServing != null"><abbr :title="t('calorietracker', 'Protein')">P</abbr> {{ selectedRecipe.proteinPerServing }}g</span>
+						<span v-if="selectedRecipe.carbsPerServing != null"><abbr :title="t('calorietracker', 'Carbs')">C</abbr> {{ selectedRecipe.carbsPerServing }}g</span>
+						<span v-if="selectedRecipe.fatPerServing != null"><abbr :title="t('calorietracker', 'Fat')">F</abbr> {{ selectedRecipe.fatPerServing }}g</span>
 					</div>
 				</div>
 
@@ -388,6 +390,10 @@ function useRecipe() {
 .recipe-search__detail-actions {
 	display: flex;
 	gap: 8px;
+}
+
+.recipe-search__nutrition-grid abbr {
+	text-decoration: none;
 }
 
 </style>

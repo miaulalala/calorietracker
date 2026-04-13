@@ -208,9 +208,9 @@
 				aria-live="polite"
 				:aria-hidden="String(tdeeResult === null)">
 				<template v-if="tdeeResult !== null">
-					<span class="settings-tdee-result__value">{{ displayEnergy(tdeeResult) }} {{ energyLabel }}/day</span>
+					<span class="settings-tdee-result__value">{{ t('calorietracker', '{energy} {unit}/day', { energy: displayEnergy(tdeeResult), unit: energyLabel }) }}</span>
 					<span class="settings-tdee-result__breakdown">
-						BMR {{ displayEnergy(tdeeBMR) }} {{ energyLabel }} &times; {{ selectedActivity.factor }} activity{{ selectedGoal.adjustment !== 0 ? (selectedGoal.adjustment > 0 ? ' + ' : ' − ') + displayEnergy(Math.abs(selectedGoal.adjustment)) + ' ' + energyLabel + ' adjustment' : '' }}
+						{{ t('calorietracker', 'BMR {bmr} {unit} × {factor} activity', { bmr: displayEnergy(tdeeBMR), unit: energyLabel, factor: selectedActivity.factor }) }}{{ selectedGoal.adjustment !== 0 ? (selectedGoal.adjustment > 0 ? ' + ' : ' − ') + t('calorietracker', '{energy} {unit} adjustment', { energy: displayEnergy(Math.abs(selectedGoal.adjustment)), unit: energyLabel }) : '' }}
 					</span>
 				</template>
 			</div>
@@ -244,17 +244,17 @@ import { useUnits } from '../composables/useUnits.js'
 import TdeeProfileApi from '../services/TdeeProfileApi.js'
 
 const SEX_OPTIONS = [
-	{ id: 'amab', label: 'AMAB', offset: 5 },
-	{ id: 'afab', label: 'AFAB', offset: -161 },
-	{ id: 'unspecified', label: 'Non-binary / Prefer not to say', offset: -78 },
+	{ id: 'amab', label: t('calorietracker', 'AMAB'), offset: 5 },
+	{ id: 'afab', label: t('calorietracker', 'AFAB'), offset: -161 },
+	{ id: 'unspecified', label: t('calorietracker', 'Non-binary / Prefer not to say'), offset: -78 },
 ]
 
 const ACTIVITY_OPTIONS = [
-	{ id: 'sedentary', label: 'Sedentary (desk job, little or no exercise)', factor: 1.2 },
-	{ id: 'light', label: 'Lightly active (exercise 1–3 days/week)', factor: 1.375 },
-	{ id: 'moderate', label: 'Moderately active (exercise 3–5 days/week)', factor: 1.55 },
-	{ id: 'very', label: 'Very active (exercise 6–7 days/week)', factor: 1.725 },
-	{ id: 'extra', label: 'Extra active (physical job or twice-daily training)', factor: 1.9 },
+	{ id: 'sedentary', label: t('calorietracker', 'Sedentary (desk job, little or no exercise)'), factor: 1.2 },
+	{ id: 'light', label: t('calorietracker', 'Lightly active (exercise 1–3 days/week)'), factor: 1.375 },
+	{ id: 'moderate', label: t('calorietracker', 'Moderately active (exercise 3–5 days/week)'), factor: 1.55 },
+	{ id: 'very', label: t('calorietracker', 'Very active (exercise 6–7 days/week)'), factor: 1.725 },
+	{ id: 'extra', label: t('calorietracker', 'Extra active (physical job or twice-daily training)'), factor: 1.9 },
 ]
 
 const GOAL_DATA = [
@@ -273,9 +273,10 @@ const { displayEnergy, toKcal, displayWeight, weightLabel, energyLabel, isImperi
 const goalOptions = computed(() => GOAL_DATA.map(g => ({
 	...g,
 	label: g.adjustment === 0
-		? 'Maintain weight'
-		: (g.adjustment < 0 ? 'Lose weight' : 'Gain weight')
-			+ ` (${g.adjustment > 0 ? '+' : '−'}${displayEnergy(Math.abs(g.adjustment))} ${energyLabel.value}/day)`,
+		? t('calorietracker', 'Maintain weight')
+		: (g.adjustment < 0
+			? t('calorietracker', 'Lose weight ({adjustment} {unit}/day)', { adjustment: '−' + displayEnergy(Math.abs(g.adjustment)), unit: energyLabel.value })
+			: t('calorietracker', 'Gain weight (+{adjustment} {unit}/day)', { adjustment: displayEnergy(Math.abs(g.adjustment)), unit: energyLabel.value })),
 })))
 
 const saving = ref(false)
