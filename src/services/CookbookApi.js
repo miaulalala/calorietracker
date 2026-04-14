@@ -10,14 +10,22 @@ const url = (path) => generateUrl('/apps/calorietracker' + path)
 
 export default {
 	search(query) {
-		return axios.get(url('/usda/search'), {
+		return axios.get(url('/cookbook/search'), {
 			params: { query },
 		}).then(r => r.data)
 	},
 
-	batchSearch(queries) {
-		return axios.post(url('/usda/batch-search'), {
-			queries: JSON.stringify(queries),
+	getRecipe(id) {
+		return axios.get(url(`/cookbook/recipes/${id}`)).then(r => r.data)
+	},
+
+	updateNutrition(id, { calories, protein, carbs, fat, servingSize }) {
+		return axios.put(url(`/cookbook/recipes/${id}/nutrition`), {
+			calories,
+			protein,
+			carbs,
+			fat,
+			servingSize,
 		}).then(r => r.data)
 	},
 }

@@ -18,6 +18,7 @@ use OCP\ICache;
 use OCP\ICacheFactory;
 use OCP\IConfig;
 use OCP\IRequest;
+use OCP\L10N\IFactory as IL10NFactory;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
@@ -37,11 +38,14 @@ class OpenFoodFactsControllerTest extends TestCase {
 		$cacheFactory = $this->createMock(ICacheFactory::class);
 		$cacheFactory->method('createDistributed')->willReturn($this->cache);
 
+		$l10nFactory = $this->createMock(IL10NFactory::class);
+
 		$this->controller = new OpenFoodFactsController(
 			$request,
 			$this->clientService,
 			$config,
 			$logger,
+			$l10nFactory,
 			$cacheFactory,
 		);
 	}
