@@ -42,8 +42,9 @@
 							'week-view__day-row--future': day.isFuture,
 							'week-view__day-row--empty': !day.summary,
 						}"
-						:role="day.isFuture ? undefined : 'button'"
-						:tabindex="day.isFuture ? undefined : 0"
+						:tabindex="day.isFuture ? -1 : 0"
+						:aria-label="day.isFuture ? undefined : t('calorietracker', 'View {day}', { day: day.label })"
+						:aria-disabled="day.isFuture ? 'true' : undefined"
 						@click="day.isFuture || goToDay(day.date)"
 						@keydown.enter.prevent="day.isFuture || goToDay(day.date)"
 						@keydown.space.prevent="day.isFuture || goToDay(day.date)">
@@ -52,19 +53,34 @@
 							<span class="week-view__day-date">{{ day.shortDate }}</span>
 						</td>
 						<td class="week-view__col-num">
-							{{ day.summary ? displayEnergy(day.summary.totalKcal) : '—' }}
+							<template v-if="day.summary">
+								{{ displayEnergy(day.summary.totalKcal) }}
+							</template>
+							<span v-else :aria-label="t('calorietracker', 'No data')">—</span>
 						</td>
 						<td class="week-view__col-num">
-							{{ day.summary ? displayMacroWeight(day.summary.totalProteinG) : '—' }}
+							<template v-if="day.summary">
+								{{ displayMacroWeight(day.summary.totalProteinG) }}
+							</template>
+							<span v-else :aria-label="t('calorietracker', 'No data')">—</span>
 						</td>
 						<td class="week-view__col-num">
-							{{ day.summary ? displayMacroWeight(day.summary.totalCarbsG) : '—' }}
+							<template v-if="day.summary">
+								{{ displayMacroWeight(day.summary.totalCarbsG) }}
+							</template>
+							<span v-else :aria-label="t('calorietracker', 'No data')">—</span>
 						</td>
 						<td class="week-view__col-num">
-							{{ day.summary ? displayMacroWeight(day.summary.totalFatG) : '—' }}
+							<template v-if="day.summary">
+								{{ displayMacroWeight(day.summary.totalFatG) }}
+							</template>
+							<span v-else :aria-label="t('calorietracker', 'No data')">—</span>
 						</td>
 						<td class="week-view__col-num">
-							{{ day.summary ? day.summary.itemCount : '—' }}
+							<template v-if="day.summary">
+								{{ day.summary.itemCount }}
+							</template>
+							<span v-else :aria-label="t('calorietracker', 'No data')">—</span>
 						</td>
 					</tr>
 				</tbody>

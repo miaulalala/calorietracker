@@ -26,13 +26,13 @@
 							<NcIconSvgWrapper :svg="iconChevronDown" />
 						</span>
 						{{ mealLabel(mealType) }}
-						<span class="food-entry-list__meal-count">{{ groups[mealType].length }}</span>
+						<span class="food-entry-list__meal-count" :aria-label="n('calorietracker', '{count} item', '{count} items', groups[mealType].length, { count: groups[mealType].length })">{{ groups[mealType].length }}</span>
 						<span class="food-entry-list__meal-total">
 							{{ mealTotal(groups[mealType]) }} {{ energyLabel }}
 						</span>
 					</button>
 				</h4>
-				<hr class="food-entry-list__separator">
+				<hr class="food-entry-list__separator" aria-hidden="true">
 
 				<NcFormBox v-show="!collapsed[mealType]">
 					<NcFormBoxButton v-for="entry in groups[mealType]"
@@ -43,9 +43,9 @@
 							<span class="food-entry-list__details">
 								<span class="food-entry-list__detail">{{ displayWeight(entry.amountGrams) }}{{ weightLabel }}</span>
 								<span class="food-entry-list__detail food-entry-list__detail--energy">{{ entryEnergy(entry.caloriesPer100g, entry.amountGrams) }} {{ energyLabel }}</span>
-								<span v-if="entry.proteinPer100g != null" class="food-entry-list__detail food-entry-list__detail--macro">P {{ entryMacroGrams(entry.proteinPer100g, entry.amountGrams) }}{{ weightLabel }}</span>
-								<span v-if="entry.carbsPer100g != null" class="food-entry-list__detail food-entry-list__detail--macro">C {{ entryMacroGrams(entry.carbsPer100g, entry.amountGrams) }}{{ weightLabel }}</span>
-								<span v-if="entry.fatPer100g != null" class="food-entry-list__detail food-entry-list__detail--macro">F {{ entryMacroGrams(entry.fatPer100g, entry.amountGrams) }}{{ weightLabel }}</span>
+								<span v-if="entry.proteinPer100g != null" class="food-entry-list__detail food-entry-list__detail--macro"><abbr :title="t('calorietracker', 'Protein')">P</abbr> {{ entryMacroGrams(entry.proteinPer100g, entry.amountGrams) }}{{ weightLabel }}</span>
+								<span v-if="entry.carbsPer100g != null" class="food-entry-list__detail food-entry-list__detail--macro"><abbr :title="t('calorietracker', 'Carbs')">C</abbr> {{ entryMacroGrams(entry.carbsPer100g, entry.amountGrams) }}{{ weightLabel }}</span>
+								<span v-if="entry.fatPer100g != null" class="food-entry-list__detail food-entry-list__detail--macro"><abbr :title="t('calorietracker', 'Fat')">F</abbr> {{ entryMacroGrams(entry.fatPer100g, entry.amountGrams) }}{{ weightLabel }}</span>
 							</span>
 						</template>
 						<template #icon>
@@ -96,7 +96,7 @@
 
 <script setup>
 import { ref, reactive, computed } from 'vue'
-import { translate as t } from '@nextcloud/l10n'
+import { translate as t, translatePlural as n } from '@nextcloud/l10n'
 import NcFormBox from '@nextcloud/vue/components/NcFormBox'
 import NcFormBoxButton from '@nextcloud/vue/components/NcFormBoxButton'
 import NcButton from '@nextcloud/vue/components/NcButton'
@@ -298,6 +298,10 @@ async function doDelete() {
 
 .food-entry-list__detail--macro {
 	min-width: 4.5em;
+}
+
+.food-entry-list__detail--macro abbr {
+	text-decoration: none;
 }
 
 .food-entry-list__group :deep(.form-box) {

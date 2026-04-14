@@ -63,28 +63,31 @@
 						<div class="food-entry-form__search-result-top">
 							<span class="food-entry-form__search-result-name">{{ result.name }}</span>
 							<span class="food-entry-form__search-result-source"
-								:class="`food-entry-form__search-result-source--${result.source}`">{{ result.source === 'off' ? 'OFF' : 'USDA' }}</span>
+								:class="`food-entry-form__search-result-source--${result.source}`"
+								:aria-label="result.source === 'off' ? t('calorietracker', 'Source: Open Food Facts') : t('calorietracker', 'Source: USDA')">{{ result.source === 'off' ? 'OFF' : 'USDA' }}</span>
 						</div>
 						<div class="food-entry-form__search-result-bottom">
 							<span class="food-entry-form__search-result-kcal">{{ displayEnergy(displayPer100g(result.caloriesPer100g)) }} {{ energyLabel }}/{{ isImperial ? 'oz' : '100g' }}</span>
-							<span v-if="result.proteinPer100g != null" class="food-entry-form__search-result-macro">P {{ displayPer100g(result.proteinPer100g) }}{{ weightLabel }}</span>
-							<span v-if="result.carbsPer100g != null" class="food-entry-form__search-result-macro">C {{ displayPer100g(result.carbsPer100g) }}{{ weightLabel }}</span>
-							<span v-if="result.fatPer100g != null" class="food-entry-form__search-result-macro">F {{ displayPer100g(result.fatPer100g) }}{{ weightLabel }}</span>
+							<span v-if="result.proteinPer100g != null" class="food-entry-form__search-result-macro"><abbr :title="t('calorietracker', 'Protein')">P</abbr> {{ displayPer100g(result.proteinPer100g) }}{{ weightLabel }}</span>
+							<span v-if="result.carbsPer100g != null" class="food-entry-form__search-result-macro"><abbr :title="t('calorietracker', 'Carbs')">C</abbr> {{ displayPer100g(result.carbsPer100g) }}{{ weightLabel }}</span>
+							<span v-if="result.fatPer100g != null" class="food-entry-form__search-result-macro"><abbr :title="t('calorietracker', 'Fat')">F</abbr> {{ displayPer100g(result.fatPer100g) }}{{ weightLabel }}</span>
 						</div>
 					</li>
 				</ul>
-				<p v-if="searchWarning" class="food-entry-form__search-warning">
-					{{ searchWarning }}
-				</p>
-				<div v-else-if="searchError" class="food-entry-form__search-feedback">
-					<p class="food-entry-form__search-empty food-entry-form__search-empty--error">
-						{{ t('calorietracker', 'Could not reach food database.') }}
+				<div aria-live="polite">
+					<p v-if="searchWarning" class="food-entry-form__search-warning">
+						{{ searchWarning }}
 					</p>
-				</div>
-				<div v-else-if="searchDone && searchQuery.length >= 2" class="food-entry-form__search-feedback">
-					<p class="food-entry-form__search-empty">
-						{{ t('calorietracker', 'No results found.') }}
-					</p>
+					<div v-else-if="searchError" class="food-entry-form__search-feedback">
+						<p class="food-entry-form__search-empty food-entry-form__search-empty--error">
+							{{ t('calorietracker', 'Could not reach food database.') }}
+						</p>
+					</div>
+					<div v-else-if="searchDone && searchQuery.length >= 2" class="food-entry-form__search-feedback">
+						<p class="food-entry-form__search-empty">
+							{{ t('calorietracker', 'No results found.') }}
+						</p>
+					</div>
 				</div>
 			</div>
 
@@ -102,9 +105,9 @@
 							<span class="food-entry-form__details">
 								<span class="food-entry-form__detail">{{ displayWeight(entry.amountGrams) }}{{ weightLabel }}</span>
 								<span class="food-entry-form__detail food-entry-form__detail--energy">{{ displayEnergy(Math.round(entry.caloriesPer100g * entry.amountGrams / 100)) }} {{ energyLabel }}</span>
-								<span v-if="entry.proteinPer100g != null" class="food-entry-form__detail food-entry-form__detail--macro">P {{ entryMacroGrams(entry.proteinPer100g, entry.amountGrams) }}{{ weightLabel }}</span>
-								<span v-if="entry.carbsPer100g != null" class="food-entry-form__detail food-entry-form__detail--macro">C {{ entryMacroGrams(entry.carbsPer100g, entry.amountGrams) }}{{ weightLabel }}</span>
-								<span v-if="entry.fatPer100g != null" class="food-entry-form__detail food-entry-form__detail--macro">F {{ entryMacroGrams(entry.fatPer100g, entry.amountGrams) }}{{ weightLabel }}</span>
+								<span v-if="entry.proteinPer100g != null" class="food-entry-form__detail food-entry-form__detail--macro"><abbr :title="t('calorietracker', 'Protein')">P</abbr> {{ entryMacroGrams(entry.proteinPer100g, entry.amountGrams) }}{{ weightLabel }}</span>
+								<span v-if="entry.carbsPer100g != null" class="food-entry-form__detail food-entry-form__detail--macro"><abbr :title="t('calorietracker', 'Carbs')">C</abbr> {{ entryMacroGrams(entry.carbsPer100g, entry.amountGrams) }}{{ weightLabel }}</span>
+								<span v-if="entry.fatPer100g != null" class="food-entry-form__detail food-entry-form__detail--macro"><abbr :title="t('calorietracker', 'Fat')">F</abbr> {{ entryMacroGrams(entry.fatPer100g, entry.amountGrams) }}{{ weightLabel }}</span>
 							</span>
 						</template>
 						<template #icon>
@@ -137,6 +140,7 @@
 						:key="food.id"
 						type="button"
 						class="food-entry-form__frequent-chip"
+						:aria-label="t('calorietracker', 'Add {food} ({energy} {unit})', { food: food.name, energy: displayEnergy(displayPer100g(food.caloriesPer100g)), unit: energyLabel })"
 						@click="selectResult(food)">
 						<span class="food-entry-form__frequent-name">{{ food.name }}</span>
 						<span class="food-entry-form__frequent-kcal">{{ displayEnergy(displayPer100g(food.caloriesPer100g)) }} {{ energyLabel }}</span>
@@ -209,8 +213,8 @@
 				</div>
 
 				<!-- Calorie preview -->
-				<div class="food-entry-form__preview">
-					≈ {{ form.caloriesPer100g > 0 && form.amount > 0 ? calculatedCalories : 0 }} {{ energyLabel }}
+				<div class="food-entry-form__preview" :aria-label="t('calorietracker', 'Approximately {calories} {unit}', { calories: form.caloriesPer100g > 0 && form.amount > 0 ? calculatedCalories : 0, unit: energyLabel })">
+					<span aria-hidden="true">≈</span> {{ form.caloriesPer100g > 0 && form.amount > 0 ? calculatedCalories : 0 }} {{ energyLabel }}
 				</div>
 
 				<!-- Macros: 3 columns -->
@@ -886,6 +890,11 @@ async function deleteAddedEntry(entry) {
 	background: var(--color-background-hover);
 }
 
+.food-entry-form__frequent-chip:focus-visible {
+	outline: 2px solid var(--color-primary-element);
+	outline-offset: 2px;
+}
+
 .food-entry-form__frequent-kcal {
 	font-size: 0.85em;
 	color: var(--color-text-maxcontrast);
@@ -956,6 +965,11 @@ async function deleteAddedEntry(entry) {
 
 .food-entry-form__search-result-macro {
 	white-space: nowrap;
+}
+
+.food-entry-form__search-result-macro abbr,
+.food-entry-form__detail--macro abbr {
+	text-decoration: none;
 }
 
 .food-entry-form__search-result-source {
