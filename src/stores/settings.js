@@ -15,6 +15,7 @@ export const useSettingsStore = defineStore('settings', {
 		dailyFatGoal: 0,
 		energyUnit: 'kcal',
 		measurementSystem: 'metric',
+		showWeightOnDayView: false,
 	}),
 
 	getters: {
@@ -31,6 +32,7 @@ export const useSettingsStore = defineStore('settings', {
 			this.dailyFatGoal = data.dailyFatGoal ?? 0
 			this.energyUnit = data.energyUnit ?? 'kcal'
 			this.measurementSystem = data.measurementSystem ?? 'metric'
+			this.showWeightOnDayView = data.showWeightOnDayView ?? false
 		},
 
 		async saveSettings(goals) {
@@ -41,6 +43,7 @@ export const useSettingsStore = defineStore('settings', {
 			this.dailyFatGoal = data.dailyFatGoal ?? 0
 			this.energyUnit = data.energyUnit ?? 'kcal'
 			this.measurementSystem = data.measurementSystem ?? 'metric'
+			this.showWeightOnDayView = data.showWeightOnDayView ?? false
 		},
 
 		openSettings() {
