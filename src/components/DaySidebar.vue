@@ -9,6 +9,25 @@
 			<NcButton class="day-sidebar__new-button" variant="primary" @click="foodEntriesStore.openAddModal()">
 				+ {{ t('calorietracker', 'Add new entry') }}
 			</NcButton>
+			<NcButton class="day-sidebar__weight-button"
+				variant="tertiary"
+				wide
+				@click="weightLogStore.openLogModal()">
+				<template #icon>
+					<svg xmlns="http://www.w3.org/2000/svg"
+						class="day-sidebar__week-icon"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						aria-hidden="true">
+						<path d="M12 3a4 4 0 0 0-4 4c0 1.5.8 2.8 2 3.4V21h4V10.4c1.2-.6 2-1.9 2-3.4a4 4 0 0 0-4-4z" />
+					</svg>
+				</template>
+				{{ latestWeightDisplay || t('calorietracker', 'Log weight') }}
+			</NcButton>
 		</template>
 		<template #footer>
 			<div class="day-sidebar__settings-container">
@@ -103,6 +122,7 @@ import NcAppNavigationItem from '@nextcloud/vue/components/NcAppNavigationItem'
 import NcButton from '@nextcloud/vue/components/NcButton'
 import { useFoodEntriesStore } from '../stores/foodEntries.js'
 import { useSettingsStore } from '../stores/settings.js'
+import { useWeightLogStore } from '../stores/weightLog.js'
 import { useUnits } from '../composables/useUnits.js'
 import { toLocalDateString } from '../utils/date.js'
 
@@ -110,8 +130,14 @@ const route = useRoute()
 const router = useRouter()
 const foodEntriesStore = useFoodEntriesStore()
 const settingsStore = useSettingsStore()
-const { displayEnergy, energyLabel } = useUnits()
+const weightLogStore = useWeightLogStore()
+const { displayEnergy, displayBodyWeight, energyLabel, bodyWeightLabel } = useUnits()
 const { currentDate, daySummaries } = storeToRefs(foodEntriesStore)
+
+const latestWeightDisplay = computed(() => {
+	if (!weightLogStore.latestWeight) return ''
+	return displayBodyWeight(weightLogStore.latestWeight.weightKg) + ' ' + bodyWeightLabel.value
+})
 
 const weeks = computed(() => {
 	const today = new Date()
@@ -171,6 +197,7 @@ function selectDay(date) {
 
 foodEntriesStore.fetchSummaries()
 settingsStore.fetchSettings()
+weightLogStore.fetchLatest()
 </script>
 
 <style scoped>
@@ -181,7 +208,12 @@ settingsStore.fetchSettings()
 
 .day-sidebar__new-button {
 	width: calc(100% - 16px);
-	margin: 8px;
+	margin: 8px 8px 0;
+}
+
+.day-sidebar__weight-button {
+	width: calc(100% - 16px);
+	margin: 4px 8px 8px;
 }
 
 .day-sidebar__day-list {

@@ -35,6 +35,13 @@
 					</NcButton>
 				</NcFormBox>
 			</NcFormGroup>
+
+			<NcFormGroup :label="t('calorietracker', 'Day view')">
+				<NcCheckboxRadioSwitch v-model="form.showWeightOnDayView"
+					type="switch">
+					{{ t('calorietracker', 'Show current weight on day view') }}
+				</NcCheckboxRadioSwitch>
+			</NcFormGroup>
 		</NcAppSettingsSection>
 
 		<!-- ── Goals section ─────────────────────────────────────────── -->
@@ -267,7 +274,7 @@ const GOAL_DATA = [
 const KCAL_PER_G = { protein: 4, carbs: 4, fat: 9 }
 
 const store = useSettingsStore()
-const { open, dailyCalorieGoal, dailyProteinGoal, dailyCarbsGoal, dailyFatGoal, energyUnit, measurementSystem } = storeToRefs(store)
+const { open, dailyCalorieGoal, dailyProteinGoal, dailyCarbsGoal, dailyFatGoal, energyUnit, measurementSystem, showWeightOnDayView } = storeToRefs(store)
 const { displayEnergy, toKcal, displayWeight, weightLabel, energyLabel, isImperial } = useUnits()
 
 const goalOptions = computed(() => GOAL_DATA.map(g => ({
@@ -293,6 +300,7 @@ const form = reactive({
 	dailyFatPct: 0,
 	energyUnit: 'kcal',
 	measurementSystem: 'metric',
+	showWeightOnDayView: false,
 })
 
 const tdee = reactive({
@@ -354,6 +362,9 @@ watch(() => form.energyUnit, (newUnit, oldUnit) => {
 watch(() => form.measurementSystem, (newVal) => {
 	store.measurementSystem = newVal
 })
+watch(() => form.showWeightOnDayView, (newVal) => {
+	store.showWeightOnDayView = newVal
+})
 
 watch(open, async (isOpen) => {
 	if (isOpen) {
@@ -362,6 +373,7 @@ watch(open, async (isOpen) => {
 		savedUnitSnapshot.value = {
 			energyUnit: energyUnit.value,
 			measurementSystem: measurementSystem.value,
+			showWeightOnDayView: showWeightOnDayView.value,
 		}
 		const cal = dailyCalorieGoal.value
 		// Guard against the energyUnit watcher double-converting during init.
@@ -369,6 +381,7 @@ watch(open, async (isOpen) => {
 		Object.assign(form, {
 			energyUnit: energyUnit.value,
 			measurementSystem: measurementSystem.value,
+			showWeightOnDayView: showWeightOnDayView.value,
 			dailyCalorieGoal: displayEnergy(cal),
 			dailyProteinPct: gramsToPercent(dailyProteinGoal.value, KCAL_PER_G.protein, cal),
 			dailyCarbsPct: gramsToPercent(dailyCarbsGoal.value, KCAL_PER_G.carbs, cal),
@@ -411,6 +424,7 @@ function onOpenUpdate(isOpen) {
 		if (!didSave.value && savedUnitSnapshot.value) {
 			store.energyUnit = savedUnitSnapshot.value.energyUnit
 			store.measurementSystem = savedUnitSnapshot.value.measurementSystem
+			store.showWeightOnDayView = savedUnitSnapshot.value.showWeightOnDayView
 		}
 		store.closeSettings()
 	}
@@ -468,6 +482,7 @@ async function save() {
 			dailyCalorieGoal: cal,
 			energyUnit: form.energyUnit,
 			measurementSystem: form.measurementSystem,
+			showWeightOnDayView: form.showWeightOnDayView,
 		}
 		if (cal) {
 			payload.dailyProteinGoal = Math.round(form.dailyProteinPct / 100 * cal / KCAL_PER_G.protein)

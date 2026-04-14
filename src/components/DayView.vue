@@ -25,6 +25,12 @@
 			</NcButton>
 		</div>
 
+		<!-- Current weight -->
+		<div v-if="showWeight && latestWeight" class="day-view__weight">
+			<span class="day-view__weight-value">{{ displayBodyWeight(latestWeight.weightKg) }} {{ bodyWeightLabel }}</span>
+			<span v-if="latestWeight.loggedAt !== currentDate" class="day-view__weight-date">{{ latestWeight.loggedAt }}</span>
+		</div>
+
 		<!-- Calorie summary -->
 		<div class="day-view__summary">
 			<template v-if="calorieGoal > 0">
@@ -72,15 +78,18 @@ import NcProgressBar from '@nextcloud/vue/components/NcProgressBar'
 import FoodEntryList from './FoodEntryList.vue'
 import { useFoodEntriesStore } from '../stores/foodEntries.js'
 import { useSettingsStore } from '../stores/settings.js'
+import { useWeightLogStore } from '../stores/weightLog.js'
 import { useUnits } from '../composables/useUnits.js'
 import { toLocalDateString } from '../utils/date.js'
 
 const foodEntriesStore = useFoodEntriesStore()
 const settingsStore = useSettingsStore()
-const { displayEnergy, displayWeight, energyLabel, weightLabel } = useUnits()
+const weightLogStore = useWeightLogStore()
+const { displayEnergy, displayWeight, displayBodyWeight, energyLabel, weightLabel, bodyWeightLabel } = useUnits()
 
 const { currentDate } = storeToRefs(foodEntriesStore)
-const { dailyCalorieGoal: calorieGoal, dailyProteinGoal: proteinGoal, dailyCarbsGoal: carbsGoal, dailyFatGoal: fatGoal } = storeToRefs(settingsStore)
+const { dailyCalorieGoal: calorieGoal, dailyProteinGoal: proteinGoal, dailyCarbsGoal: carbsGoal, dailyFatGoal: fatGoal, showWeightOnDayView: showWeight } = storeToRefs(settingsStore)
+const latestWeight = computed(() => weightLogStore.latestWeight)
 
 const totalCalories = computed(() => displayEnergy(foodEntriesStore.totalCalories))
 const displayCalorieGoal = computed(() => displayEnergy(calorieGoal.value))
@@ -165,6 +174,24 @@ onMounted(() => {
 	margin: 0;
 	font-size: 1.2em;
 	text-align: center;
+}
+
+.day-view__weight {
+	display: flex;
+	align-items: baseline;
+	justify-content: center;
+	gap: 8px;
+	font-size: 0.9em;
+	color: var(--color-text-maxcontrast);
+}
+
+.day-view__weight-value {
+	font-weight: 600;
+	color: var(--color-main-text);
+}
+
+.day-view__weight-date {
+	font-size: 0.85em;
 }
 
 .day-view__summary {
