@@ -75,6 +75,8 @@
 							:class="{ 'day-sidebar__day-item--active': day.date === currentDate }"
 							role="button"
 							tabindex="0"
+							:aria-label="t('calorietracker', 'View {day}', { day: day.label })"
+							:aria-current="day.date === currentDate ? 'date' : undefined"
 							@click="selectDay(day.date)"
 							@keydown.enter.prevent="selectDay(day.date)"
 							@keydown.space.prevent="selectDay(day.date)">
