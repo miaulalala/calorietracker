@@ -13,12 +13,12 @@
 			<!-- Tab toggle — only when cookbook is available and not in edit/manual mode -->
 			<div v-if="cookbookAvailable && !editingEntry && !showManual" class="food-entry-form__tabs">
 				<NcButton :variant="activeTab === 'food' ? 'primary' : 'secondary'"
-					native-type="button"
+					type="button"
 					@click="activeTab = 'food'">
 					{{ t('calorietracker', 'Food search') }}
 				</NcButton>
 				<NcButton :variant="activeTab === 'recipes' ? 'primary' : 'secondary'"
-					native-type="button"
+					type="button"
 					@click="activeTab = 'recipes'">
 					{{ t('calorietracker', 'Recipes') }}
 				</NcButton>
@@ -63,28 +63,31 @@
 						<div class="food-entry-form__search-result-top">
 							<span class="food-entry-form__search-result-name">{{ result.name }}</span>
 							<span class="food-entry-form__search-result-source"
-								:class="`food-entry-form__search-result-source--${result.source}`">{{ result.source === 'off' ? 'OFF' : 'USDA' }}</span>
+								:class="`food-entry-form__search-result-source--${result.source}`"
+								:aria-label="result.source === 'off' ? t('calorietracker', 'Source: Open Food Facts') : t('calorietracker', 'Source: USDA')">{{ result.source === 'off' ? 'OFF' : 'USDA' }}</span>
 						</div>
 						<div class="food-entry-form__search-result-bottom">
 							<span class="food-entry-form__search-result-kcal">{{ displayEnergy(displayPer100g(result.caloriesPer100g)) }} {{ energyLabel }}/{{ isImperial ? 'oz' : '100g' }}</span>
-							<span v-if="result.proteinPer100g != null" class="food-entry-form__search-result-macro">P {{ displayPer100g(result.proteinPer100g) }}{{ weightLabel }}</span>
-							<span v-if="result.carbsPer100g != null" class="food-entry-form__search-result-macro">C {{ displayPer100g(result.carbsPer100g) }}{{ weightLabel }}</span>
-							<span v-if="result.fatPer100g != null" class="food-entry-form__search-result-macro">F {{ displayPer100g(result.fatPer100g) }}{{ weightLabel }}</span>
+							<span v-if="result.proteinPer100g != null" class="food-entry-form__search-result-macro"><abbr :title="t('calorietracker', 'Protein')">P</abbr> {{ displayPer100g(result.proteinPer100g) }}{{ weightLabel }}</span>
+							<span v-if="result.carbsPer100g != null" class="food-entry-form__search-result-macro"><abbr :title="t('calorietracker', 'Carbs')">C</abbr> {{ displayPer100g(result.carbsPer100g) }}{{ weightLabel }}</span>
+							<span v-if="result.fatPer100g != null" class="food-entry-form__search-result-macro"><abbr :title="t('calorietracker', 'Fat')">F</abbr> {{ displayPer100g(result.fatPer100g) }}{{ weightLabel }}</span>
 						</div>
 					</li>
 				</ul>
-				<p v-if="searchWarning" class="food-entry-form__search-warning">
-					{{ searchWarning }}
-				</p>
-				<div v-else-if="searchError" class="food-entry-form__search-feedback">
-					<p class="food-entry-form__search-empty food-entry-form__search-empty--error">
-						{{ t('calorietracker', 'Could not reach food database.') }}
+				<div aria-live="polite">
+					<p v-if="searchWarning" class="food-entry-form__search-warning">
+						{{ searchWarning }}
 					</p>
-				</div>
-				<div v-else-if="searchDone && searchQuery.length >= 2" class="food-entry-form__search-feedback">
-					<p class="food-entry-form__search-empty">
-						{{ t('calorietracker', 'No results found.') }}
-					</p>
+					<div v-else-if="searchError" class="food-entry-form__search-feedback">
+						<p class="food-entry-form__search-empty food-entry-form__search-empty--error">
+							{{ t('calorietracker', 'Could not reach food database.') }}
+						</p>
+					</div>
+					<div v-else-if="searchDone && searchQuery.length >= 2" class="food-entry-form__search-feedback">
+						<p class="food-entry-form__search-empty">
+							{{ t('calorietracker', 'No results found.') }}
+						</p>
+					</div>
 				</div>
 			</div>
 
@@ -102,9 +105,9 @@
 							<span class="food-entry-form__details">
 								<span class="food-entry-form__detail">{{ displayWeight(entry.amountGrams) }}{{ weightLabel }}</span>
 								<span class="food-entry-form__detail food-entry-form__detail--energy">{{ displayEnergy(Math.round(entry.caloriesPer100g * entry.amountGrams / 100)) }} {{ energyLabel }}</span>
-								<span v-if="entry.proteinPer100g != null" class="food-entry-form__detail food-entry-form__detail--macro">P {{ entryMacroGrams(entry.proteinPer100g, entry.amountGrams) }}{{ weightLabel }}</span>
-								<span v-if="entry.carbsPer100g != null" class="food-entry-form__detail food-entry-form__detail--macro">C {{ entryMacroGrams(entry.carbsPer100g, entry.amountGrams) }}{{ weightLabel }}</span>
-								<span v-if="entry.fatPer100g != null" class="food-entry-form__detail food-entry-form__detail--macro">F {{ entryMacroGrams(entry.fatPer100g, entry.amountGrams) }}{{ weightLabel }}</span>
+								<span v-if="entry.proteinPer100g != null" class="food-entry-form__detail food-entry-form__detail--macro"><abbr :title="t('calorietracker', 'Protein')">P</abbr> {{ entryMacroGrams(entry.proteinPer100g, entry.amountGrams) }}{{ weightLabel }}</span>
+								<span v-if="entry.carbsPer100g != null" class="food-entry-form__detail food-entry-form__detail--macro"><abbr :title="t('calorietracker', 'Carbs')">C</abbr> {{ entryMacroGrams(entry.carbsPer100g, entry.amountGrams) }}{{ weightLabel }}</span>
+								<span v-if="entry.fatPer100g != null" class="food-entry-form__detail food-entry-form__detail--macro"><abbr :title="t('calorietracker', 'Fat')">F</abbr> {{ entryMacroGrams(entry.fatPer100g, entry.amountGrams) }}{{ weightLabel }}</span>
 							</span>
 						</template>
 						<template #icon>
@@ -137,6 +140,7 @@
 						:key="food.id"
 						type="button"
 						class="food-entry-form__frequent-chip"
+						:aria-label="t('calorietracker', 'Add {food} ({energy} {unit})', { food: food.name, energy: displayEnergy(displayPer100g(food.caloriesPer100g)), unit: energyLabel })"
 						@click="selectResult(food)">
 						<span class="food-entry-form__frequent-name">{{ food.name }}</span>
 						<span class="food-entry-form__frequent-kcal">{{ displayEnergy(displayPer100g(food.caloriesPer100g)) }} {{ energyLabel }}</span>
@@ -167,20 +171,20 @@
 				<!-- Amount + unit side by side -->
 				<div class="food-entry-form__fields food-entry-form__fields--two">
 					<div class="food-entry-form__field-wrap">
-						<label for="food-entry-amount" class="food-entry-form__select-label">{{ t('calorietracker', 'Amount') }}</label>
 						<NcInputField ref="amountField"
 							v-model.number="form.amount"
 							input-id="food-entry-amount"
 							type="number"
+							:label="t('calorietracker', 'Amount')"
 							:min="amountMin"
 							:step="selectedUnit?.value === 'g' ? '1' : 'any'"
 							required />
 					</div>
 
 					<div class="food-entry-form__field-wrap">
-						<label for="food-entry-unit" class="food-entry-form__select-label">{{ t('calorietracker', 'Unit') }}</label>
 						<NcSelect v-model="selectedUnit"
 							input-id="food-entry-unit"
+							:aria-label-combobox="t('calorietracker', 'Unit')"
 							:options="unitOptions"
 							:clearable="false"
 							label="label" />
@@ -190,27 +194,26 @@
 				<!-- Meal + date side by side -->
 				<div class="food-entry-form__fields food-entry-form__fields--two">
 					<div class="food-entry-form__field-wrap">
-						<label for="food-entry-meal" class="food-entry-form__select-label">{{ t('calorietracker', 'Meal') }}</label>
 						<NcSelect v-model="mealTypeOption"
 							input-id="food-entry-meal"
+							:input-label="t('calorietracker', 'Meal')"
 							:options="mealTypeOptions"
 							:clearable="false"
 							label="label" />
 					</div>
 
 					<div class="food-entry-form__field-wrap">
-						<label for="food-entry-date" class="food-entry-form__select-label">{{ t('calorietracker', 'Date') }}</label>
 						<NcDateTimePickerNative id="food-entry-date"
 							v-model="eatenAtDate"
 							type="date"
-							hide-label
+							:label="t('calorietracker', 'Date')"
 							required />
 					</div>
 				</div>
 
 				<!-- Calorie preview -->
-				<div class="food-entry-form__preview">
-					≈ {{ form.caloriesPer100g > 0 && form.amount > 0 ? calculatedCalories : 0 }} {{ energyLabel }}
+				<div class="food-entry-form__preview" :aria-label="t('calorietracker', 'Approximately {calories} {unit}', { calories: form.caloriesPer100g > 0 && form.amount > 0 ? calculatedCalories : 0, unit: energyLabel })">
+					<span aria-hidden="true">≈</span> {{ form.caloriesPer100g > 0 && form.amount > 0 ? calculatedCalories : 0 }} {{ energyLabel }}
 				</div>
 
 				<!-- Macros: 3 columns -->
@@ -235,28 +238,31 @@
 				</div>
 			</template>
 		</div>
+		<p v-if="submitError" class="food-entry-form__submit-error" role="alert">
+			{{ submitError }}
+		</p>
 		<div class="food-entry-form__actions">
 			<NcButton variant="secondary"
-				native-type="button"
+				type="button"
 				@click="store.closeAddModal()">
 				{{ t('calorietracker', 'Cancel') }}
 			</NcButton>
 			<NcButton v-if="!showManual && !editingEntry"
 				variant="secondary"
-				native-type="button"
+				type="button"
 				@click="showManual = true">
 				{{ t('calorietracker', 'Add food manually') }}
 			</NcButton>
 			<span class="food-entry-form__actions-spacer" />
 			<NcButton v-if="addedEntries.length > 0 && !showManual && !editingEntry"
 				variant="primary"
-				native-type="button"
+				type="button"
 				@click="store.closeAddModal()">
 				{{ t('calorietracker', 'Done') }}
 			</NcButton>
 			<NcButton v-if="showManual || editingEntry || editingAddedEntry"
 				variant="primary"
-				native-type="submit"
+				type="submit"
 				:disabled="loading || !canSubmit">
 				{{ editingEntry || editingAddedEntry ? t('calorietracker', 'Save') : t('calorietracker', 'Add') }}
 			</NcButton>
@@ -298,6 +304,7 @@ const amountField = ref(null)
 
 // Form state
 const loading = ref(false)
+const submitError = ref('')
 const showManual = ref(false)
 const selectedSource = ref(null)
 const selectedExternalId = ref(null)
@@ -671,6 +678,7 @@ function toPayload() {
  */
 async function submit() {
 	loading.value = true
+	submitError.value = ''
 	try {
 		if (editingEntry.value) {
 			await store.updateEntry({
@@ -708,6 +716,9 @@ async function submit() {
 			selectedSource.value = null
 			selectedExternalId.value = null
 		}
+	} catch (e) {
+		console.error('Failed to save food entry:', e)
+		submitError.value = t('calorietracker', 'Could not save entry. Please try again.')
 	} finally {
 		loading.value = false
 	}
@@ -814,11 +825,6 @@ async function deleteAddedEntry(entry) {
 	padding: var(--border-width-input-focused, 2px);
 }
 
-.food-entry-form__select-label {
-	font-size: 0.9em;
-	color: var(--color-text-maxcontrast);
-}
-
 .food-entry-form__section-label {
 	margin: 4px 0 8px;
 	font-size: 0.85em;
@@ -884,6 +890,11 @@ async function deleteAddedEntry(entry) {
 
 .food-entry-form__frequent-chip:hover {
 	background: var(--color-background-hover);
+}
+
+.food-entry-form__frequent-chip:focus-visible {
+	outline: 2px solid var(--color-primary-element);
+	outline-offset: 2px;
 }
 
 .food-entry-form__frequent-kcal {
@@ -958,6 +969,11 @@ async function deleteAddedEntry(entry) {
 	white-space: nowrap;
 }
 
+.food-entry-form__search-result-macro abbr,
+.food-entry-form__detail--macro abbr {
+	text-decoration: none;
+}
+
 .food-entry-form__search-result-source {
 	font-size: 0.75em;
 	font-weight: 600;
@@ -1003,6 +1019,15 @@ async function deleteAddedEntry(entry) {
 	margin-bottom: 12px;
 	font-weight: bold;
 	color: var(--color-primary-element);
+}
+
+.food-entry-form__submit-error {
+	margin: 0 0 8px;
+	padding: 8px 12px;
+	color: var(--color-error);
+	background: var(--color-error-hover);
+	border-radius: var(--border-radius);
+	font-size: 0.9em;
 }
 
 .food-entry-form__actions {

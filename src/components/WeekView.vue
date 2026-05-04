@@ -42,29 +42,50 @@
 							'week-view__day-row--future': day.isFuture,
 							'week-view__day-row--empty': !day.summary,
 						}"
-						:role="day.isFuture ? undefined : 'button'"
-						:tabindex="day.isFuture ? undefined : 0"
-						@click="day.isFuture || goToDay(day.date)"
-						@keydown.enter.prevent="day.isFuture || goToDay(day.date)"
-						@keydown.space.prevent="day.isFuture || goToDay(day.date)">
+						@click="day.isFuture || goToDay(day.date)">
 						<td class="week-view__col-day">
-							<span class="week-view__day-name">{{ day.label }}</span>
-							<span class="week-view__day-date">{{ day.shortDate }}</span>
+							<button v-if="!day.isFuture"
+								type="button"
+								class="week-view__day-btn"
+								:aria-label="t('calorietracker', 'View {day}', { day: day.label })"
+								@click.stop="goToDay(day.date)">
+								<span class="week-view__day-name">{{ day.label }}</span>
+								<span class="week-view__day-date">{{ day.shortDate }}</span>
+							</button>
+							<template v-else>
+								<span class="week-view__day-name">{{ day.label }}</span>
+								<span class="week-view__day-date">{{ day.shortDate }}</span>
+							</template>
 						</td>
 						<td class="week-view__col-num">
-							{{ day.summary ? displayEnergy(day.summary.totalKcal) : '—' }}
+							<template v-if="day.summary">
+								{{ displayEnergy(day.summary.totalKcal) }}
+							</template>
+							<span v-else :aria-label="t('calorietracker', 'No data')">—</span>
 						</td>
 						<td class="week-view__col-num">
-							{{ day.summary ? displayMacroWeight(day.summary.totalProteinG) : '—' }}
+							<template v-if="day.summary">
+								{{ displayMacroWeight(day.summary.totalProteinG) }}
+							</template>
+							<span v-else :aria-label="t('calorietracker', 'No data')">—</span>
 						</td>
 						<td class="week-view__col-num">
-							{{ day.summary ? displayMacroWeight(day.summary.totalCarbsG) : '—' }}
+							<template v-if="day.summary">
+								{{ displayMacroWeight(day.summary.totalCarbsG) }}
+							</template>
+							<span v-else :aria-label="t('calorietracker', 'No data')">—</span>
 						</td>
 						<td class="week-view__col-num">
-							{{ day.summary ? displayMacroWeight(day.summary.totalFatG) : '—' }}
+							<template v-if="day.summary">
+								{{ displayMacroWeight(day.summary.totalFatG) }}
+							</template>
+							<span v-else :aria-label="t('calorietracker', 'No data')">—</span>
 						</td>
 						<td class="week-view__col-num">
-							{{ day.summary ? day.summary.itemCount : '—' }}
+							<template v-if="day.summary">
+								{{ day.summary.itemCount }}
+							</template>
+							<span v-else :aria-label="t('calorietracker', 'No data')">—</span>
 						</td>
 					</tr>
 				</tbody>
@@ -304,9 +325,21 @@ watch(() => route.params.weekStart, fetchWeekSummaries, { immediate: true })
 	background: var(--color-background-hover);
 }
 
-.week-view__day-row:focus-visible {
+.week-view__day-btn {
+	display: block;
+	width: 100%;
+	background: none;
+	border: none;
+	padding: 0;
+	text-align: left;
+	cursor: pointer;
+	color: inherit;
+}
+
+.week-view__day-btn:focus-visible {
 	outline: 2px solid var(--color-primary-element);
-	outline-offset: -2px;
+	outline-offset: 2px;
+	border-radius: 2px;
 }
 
 .week-view__day-row--today td:first-child {
