@@ -1,7 +1,7 @@
 <?php
 
 /**
- * SPDX-FileCopyrightText: 2026 Nextcloud contributors
+ * SPDX-FileCopyrightText: 2026 Anna Larch
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -50,7 +50,7 @@ class FoodEntryController extends Controller {
 	public function create(
 		string $foodName,
 		int $caloriesPer100g,
-		int $amountGrams,
+		float $amountValue,
 		string $mealType,
 		string $eatenAt,
 		?int $proteinPer100g = null,
@@ -58,13 +58,16 @@ class FoodEntryController extends Controller {
 		?int $fatPer100g = null,
 		?string $source = null,
 		?string $externalId = null,
+		string $amountUnit = 'g',
+		float $gramsPerUnit = 1.0,
+		?float $densityGramsPerMl = null,
 	): JSONResponse {
 		try {
 			$entry = $this->service->create(
 				$this->userId,
 				$foodName,
 				$caloriesPer100g,
-				$amountGrams,
+				$amountValue,
 				$mealType,
 				$eatenAt,
 				$proteinPer100g,
@@ -72,6 +75,9 @@ class FoodEntryController extends Controller {
 				$fatPer100g,
 				$source,
 				$externalId,
+				$amountUnit,
+				$gramsPerUnit,
+				$densityGramsPerMl,
 			);
 			return new JSONResponse($entry, Http::STATUS_CREATED);
 		} catch (\InvalidArgumentException $e) {
@@ -84,12 +90,14 @@ class FoodEntryController extends Controller {
 		int $id,
 		string $foodName,
 		int $caloriesPer100g,
-		int $amountGrams,
+		float $amountValue,
 		string $mealType,
 		string $eatenAt,
 		?int $proteinPer100g = null,
 		?int $carbsPer100g = null,
 		?int $fatPer100g = null,
+		string $amountUnit = 'g',
+		float $gramsPerUnit = 1.0,
 	): JSONResponse {
 		try {
 			$entry = $this->service->update(
@@ -97,12 +105,14 @@ class FoodEntryController extends Controller {
 				$this->userId,
 				$foodName,
 				$caloriesPer100g,
-				$amountGrams,
+				$amountValue,
 				$mealType,
 				$eatenAt,
 				$proteinPer100g,
 				$carbsPer100g,
 				$fatPer100g,
+				$amountUnit,
+				$gramsPerUnit,
 			);
 			return new JSONResponse($entry);
 		} catch (DoesNotExistException) {
@@ -119,8 +129,8 @@ class FoodEntryController extends Controller {
 	 */
 	#[NoAdminRequired]
 	public function patch(int $id): JSONResponse {
-		$allowedKeys = ['foodName', 'caloriesPer100g', 'amountGrams', 'mealType',
-			'eatenAt', 'proteinPer100g', 'carbsPer100g', 'fatPer100g'];
+		$allowedKeys = ['foodName', 'caloriesPer100g', 'amountValue', 'amountUnit', 'gramsPerUnit',
+			'mealType', 'eatenAt', 'proteinPer100g', 'carbsPer100g', 'fatPer100g'];
 		$fields = [];
 		foreach ($allowedKeys as $key) {
 			if ($this->request->getParam($key) !== null) {

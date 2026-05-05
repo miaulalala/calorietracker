@@ -193,7 +193,7 @@ class OpenFoodFactsController extends Controller {
 					'action'       => 'process',
 					'json'         => '1',
 					'page_size'    => '20',
-					'fields'       => implode(',', array_merge(['code', 'nutriments', 'serving_quantity', 'serving_size'], $nameFields)),
+					'fields'       => implode(',', array_merge(['code', 'nutriments', 'serving_quantity', 'serving_size', 'serving_quantity_unit'], $nameFields)),
 				],
 				'headers' => ['User-Agent' => self::USER_AGENT],
 				'timeout' => 15,
@@ -228,7 +228,9 @@ class OpenFoodFactsController extends Controller {
 
 				$n    = isset($product['nutriments']) && is_array($product['nutriments'])
 					? $product['nutriments'] : [];
-				$kcal = $n['energy-kcal_100g'] ?? null;
+				// Prefer per-100 g values; fall back to per-100 ml for pure liquids
+				$isLiquid = isset($n['energy-kcal_100ml']);
+				$kcal = $n['energy-kcal_100g'] ?? $n['energy-kcal_100ml'] ?? null;
 				if ($kcal === null) {
 					continue;
 				}
@@ -238,12 +240,13 @@ class OpenFoodFactsController extends Controller {
 					'externalId'      => isset($product['code']) && $product['code'] !== '' ? (string) $product['code'] : null,
 					'name'            => $name,
 					'caloriesPer100g' => (int) round((float) $kcal),
-					'proteinPer100g'  => isset($n['proteins_100g'])
-						? (int) round((float) $n['proteins_100g']) : null,
-					'carbsPer100g'    => isset($n['carbohydrates_100g'])
-						? (int) round((float) $n['carbohydrates_100g']) : null,
-					'fatPer100g'      => isset($n['fat_100g'])
-						? (int) round((float) $n['fat_100g']) : null,
+					'proteinPer100g'  => isset($n['proteins_100g']) ? (int) round((float) $n['proteins_100g'])
+						: (isset($n['proteins_100ml']) ? (int) round((float) $n['proteins_100ml']) : null),
+					'carbsPer100g'    => isset($n['carbohydrates_100g']) ? (int) round((float) $n['carbohydrates_100g'])
+						: (isset($n['carbohydrates_100ml']) ? (int) round((float) $n['carbohydrates_100ml']) : null),
+					'fatPer100g'      => isset($n['fat_100g']) ? (int) round((float) $n['fat_100g'])
+						: (isset($n['fat_100ml']) ? (int) round((float) $n['fat_100ml']) : null),
+					'densityGramsPerMl' => $isLiquid ? 1.0 : null,
 				];
 
 				// Include serving size when available.
