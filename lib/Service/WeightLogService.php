@@ -65,7 +65,10 @@ class WeightLogService {
 		$entry->setNote($note);
 		try {
 			return $this->mapper->insert($entry);
-		} catch (\Exception $e) {
+		} catch (\OCP\DB\Exception $e) {
+			if ($e->getReason() !== \OCP\DB\Exception::REASON_UNIQUE_CONSTRAINT_VIOLATION) {
+				throw $e;
+			}
 			// Concurrent request already inserted a row for this user/date — update it instead.
 			$existing = $this->mapper->findForUserOnDate($userId, $date);
 			if ($existing === null) {
