@@ -63,7 +63,18 @@ class WeightLogService {
 		$entry->setWeightKg($weightKg);
 		$entry->setLoggedAt($date);
 		$entry->setNote($note);
-		return $this->mapper->insert($entry);
+		try {
+			return $this->mapper->insert($entry);
+		} catch (\Exception $e) {
+			// Concurrent request already inserted a row for this user/date — update it instead.
+			$existing = $this->mapper->findForUserOnDate($userId, $date);
+			if ($existing === null) {
+				throw $e;
+			}
+			$existing->setWeightKg($weightKg);
+			$existing->setNote($note);
+			return $this->mapper->update($existing);
+		}
 	}
 
 	/**

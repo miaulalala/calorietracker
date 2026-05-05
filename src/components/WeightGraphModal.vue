@@ -126,8 +126,10 @@ const points = computed(() => {
 	return store.history
 		.map(entry => {
 			const weight = displayBodyWeight(entry.weightKg)
-			const ts = new Date(entry.loggedAt).getTime()
-			const dateLabel = new Date(entry.loggedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+			const [y, m, d] = entry.loggedAt.split('-').map(Number)
+			const localDate = new Date(y, m - 1, d)
+			const ts = localDate.getTime()
+			const dateLabel = localDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
 			return { ts, weight, displayWeight: weight, dateLabel }
 		})
 		.filter(p => !isNaN(p.ts) && p.weight > 0)

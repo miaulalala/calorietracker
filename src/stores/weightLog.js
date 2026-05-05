@@ -5,6 +5,7 @@
 
 import { defineStore } from 'pinia'
 import api from '../services/WeightLogApi.js'
+import { toLocalDateString } from '../utils/date.js'
 
 export const useWeightLogStore = defineStore('weightLog', {
 	state: () => ({
@@ -22,8 +23,7 @@ export const useWeightLogStore = defineStore('weightLog', {
 		async fetchHistory(days = 90) {
 			const to = new Date()
 			const from = new Date(to.getFullYear(), to.getMonth(), to.getDate() - days + 1)
-			const fmt = (d) => d.toISOString().slice(0, 10)
-			this.history = await api.getWeightLogs(fmt(from), fmt(to))
+			this.history = await api.getWeightLogs(toLocalDateString(from), toLocalDateString(to))
 		},
 
 		async logWeight(payload) {
