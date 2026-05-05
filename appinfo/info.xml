@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  - SPDX-FileCopyrightText: 2026 Nextcloud contributors
+  - SPDX-FileCopyrightText: 2026 Anna Larch
   - SPDX-License-Identifier: AGPL-3.0-or-later
 -->
 <info xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://apps.nextcloud.com/schema/apps/info.xsd">
@@ -8,7 +8,7 @@
     <name>Calorie Tracker</name>
     <summary>Track your daily calorie intake</summary>
     <description>Log food items with calorie information and associate them with meal types (breakfast, lunch, dinner, snack) to track your daily nutrition.</description>
-    <version>0.3.0</version>
+    <version>0.4.0</version>
     <licence>agpl</licence>
     <namespace>CalorieTracker</namespace>
     <category>health</category>

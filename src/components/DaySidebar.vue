@@ -6,12 +6,50 @@
 <template>
 	<NcAppNavigation :aria-label="t('calorietracker', 'Calorie tracker navigation')">
 		<template #default>
-			<NcButton class="day-sidebar__new-button" variant="primary" @click="foodEntriesStore.openAddModal()">
-				+ {{ t('calorietracker', 'Add new entry') }}
-			</NcButton>
+			<div class="day-sidebar__top">
+				<NcButton class="day-sidebar__new-button" variant="primary" @click="foodEntriesStore.openAddModal()">
+					+ {{ t('calorietracker', 'Add new entry') }}
+				</NcButton>
+			</div>
 		</template>
 		<template #footer>
 			<div class="day-sidebar__settings-container">
+				<div class="day-sidebar__weight-row">
+					<NcButton variant="tertiary" wide @click="weightLogStore.openLogModal()">
+						<template #icon>
+							<svg xmlns="http://www.w3.org/2000/svg"
+								class="day-sidebar__week-icon"
+								viewBox="0 0 24 24"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="2"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								aria-hidden="true">
+								<path d="M12 3a4 4 0 0 0-4 4c0 1.5.8 2.8 2 3.4V21h4V10.4c1.2-.6 2-1.9 2-3.4a4 4 0 0 0-4-4z" />
+							</svg>
+						</template>
+						{{ t('calorietracker', 'Log weight') }}
+					</NcButton>
+					<NcButton variant="tertiary"
+						wide
+						@click="weightLogStore.openGraphModal()">
+						<template #icon>
+							<svg xmlns="http://www.w3.org/2000/svg"
+								class="day-sidebar__week-icon"
+								viewBox="0 0 24 24"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="2"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								aria-hidden="true">
+								<polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+							</svg>
+						</template>
+						{{ t('calorietracker', 'Weight history') }}
+					</NcButton>
+				</div>
 				<NcButton variant="tertiary" wide @click="settingsStore.openSettings()">
 					<template #icon>
 						<svg xmlns="http://www.w3.org/2000/svg"
@@ -105,6 +143,7 @@ import NcAppNavigationItem from '@nextcloud/vue/components/NcAppNavigationItem'
 import NcButton from '@nextcloud/vue/components/NcButton'
 import { useFoodEntriesStore } from '../stores/foodEntries.js'
 import { useSettingsStore } from '../stores/settings.js'
+import { useWeightLogStore } from '../stores/weightLog.js'
 import { useUnits } from '../composables/useUnits.js'
 import { toLocalDateString } from '../utils/date.js'
 
@@ -112,6 +151,7 @@ const route = useRoute()
 const router = useRouter()
 const foodEntriesStore = useFoodEntriesStore()
 const settingsStore = useSettingsStore()
+const weightLogStore = useWeightLogStore()
 const { displayEnergy, energyLabel } = useUnits()
 const { currentDate, daySummaries } = storeToRefs(foodEntriesStore)
 
@@ -173,6 +213,7 @@ function selectDay(date) {
 
 foodEntriesStore.fetchSummaries()
 settingsStore.fetchSettings()
+weightLogStore.fetchLatest()
 </script>
 
 <style scoped>
@@ -181,10 +222,15 @@ settingsStore.fetchSettings()
 	height: 20px;
 }
 
-.day-sidebar__new-button {
-	width: calc(100% - 16px);
-	margin: 8px;
+.day-sidebar__top {
+	padding: 8px 8px 16px;
+	border-bottom: 1px solid var(--color-border);
 }
+
+.day-sidebar__new-button {
+	width: 100%;
+}
+
 
 .day-sidebar__day-list {
 	list-style: none;
@@ -233,5 +279,10 @@ settingsStore.fetchSettings()
 	display: flex;
 	flex-direction: column;
 	padding: calc(2 * var(--default-grid-baseline));
+}
+
+.day-sidebar__weight-row {
+	display: flex;
+	flex-direction: column;
 }
 </style>
