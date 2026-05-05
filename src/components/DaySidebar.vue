@@ -231,7 +231,6 @@ weightLogStore.fetchLatest()
 	width: 100%;
 }
 
-
 .day-sidebar__day-list {
 	list-style: none;
 	margin: 0;

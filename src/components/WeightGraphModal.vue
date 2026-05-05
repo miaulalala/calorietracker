@@ -65,8 +65,7 @@
 					</g>
 
 					<!-- Line -->
-					<polyline
-						:points="polylinePoints"
+					<polyline :points="polylinePoints"
 						class="weight-graph__line"
 						fill="none" />
 

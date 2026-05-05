@@ -97,6 +97,7 @@ onMounted(() => {
 	})
 })
 
+/** @return {Promise<void>} */
 async function submit() {
 	error.value = ''
 	saving.value = true
