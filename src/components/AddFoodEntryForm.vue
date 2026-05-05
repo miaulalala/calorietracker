@@ -103,7 +103,7 @@
 						@click="editAddedEntry(entry)">
 						<template #description>
 							<span class="food-entry-form__details">
-								<span class="food-entry-form__detail">{{ displayWeight(entry.amountGrams) }}{{ weightLabel }}</span>
+								<span class="food-entry-form__detail">{{ entry.amountUnit && entry.amountUnit !== 'g' && entry.amountUnit !== 'oz' ? `${entry.amountValue} ${entry.amountUnit}` : `${displayWeight(entry.amountGrams)}${weightLabel}` }}</span>
 								<span class="food-entry-form__detail food-entry-form__detail--energy">{{ displayEnergy(Math.round(entry.caloriesPer100g * entry.amountGrams / 100)) }} {{ energyLabel }}</span>
 								<span v-if="entry.proteinPer100g != null" class="food-entry-form__detail food-entry-form__detail--macro"><abbr :title="t('calorietracker', 'Protein')">P</abbr> {{ entryMacroGrams(entry.proteinPer100g, entry.amountGrams) }}{{ weightLabel }}</span>
 								<span v-if="entry.carbsPer100g != null" class="food-entry-form__detail food-entry-form__detail--macro"><abbr :title="t('calorietracker', 'Carbs')">C</abbr> {{ entryMacroGrams(entry.carbsPer100g, entry.amountGrams) }}{{ weightLabel }}</span>
@@ -236,6 +236,16 @@
 						:label="t('calorietracker', 'Fat ({unit})', { unit: weightLabel })"
 						min="0" />
 				</div>
+
+				<!-- Density: enables volume unit options -->
+				<div class="food-entry-form__fields food-entry-form__fields--single">
+					<NcInputField v-model.number="selectedDensityGramsPerMl"
+						type="number"
+						:label="t('calorietracker', 'Density g/ml (optional, enables volume units)')"
+						:placeholder="t('calorietracker', 'e.g. 1.0 for water, 0.79 for alcohol')"
+						min="0.001"
+						step="0.001" />
+				</div>
 			</template>
 		</div>
 		<p v-if="submitError" class="food-entry-form__submit-error" role="alert">
@@ -284,7 +294,7 @@ import NcIconSvgWrapper from '@nextcloud/vue/components/NcIconSvgWrapper'
 import RecipeSearch from './RecipeSearch.vue'
 import { useFoodEntriesStore } from '../stores/foodEntries.js'
 import { toLocalDateString } from '../utils/date.js'
-import { useUnits } from '../composables/useUnits.js'
+import { useUnits, volumeUnitOptions, ML_PER_TSP, ML_PER_TBSP, ML_PER_CUP, ML_PER_FL_OZ } from '../composables/useUnits.js'
 import { useCookbook } from '../composables/useCookbook.js'
 import offApi from '../services/OpenFoodFactsApi.js'
 import usdaApi from '../services/UsdaFdcApi.js'
@@ -316,6 +326,7 @@ const GRAMS_PER_OZ = 28.3495
 const defaultUnitOptions = () => [{ value: isImperial.value ? 'oz' : 'g', label: weightLabel.value, gramsPerUnit: isImperial.value ? GRAMS_PER_OZ : 1 }]
 const unitOptions = ref(defaultUnitOptions())
 const selectedUnit = ref(unitOptions.value[0])
+const selectedDensityGramsPerMl = ref(null)
 
 // Search state
 const searchQuery = ref('')
@@ -346,22 +357,49 @@ function defaultForm() {
 }
 
 /**
- * Reset unit options to the default base unit for the current measurement system.
+ * Rebuild unit options for the given density (null = no volume units).
+ * Tries to keep the currently selected unit when it still exists in the new list.
+ * @param {number|null} density Grams per ml, or null for weight-only units
  */
-function resetUnits() {
-	unitOptions.value = defaultUnitOptions()
-	selectedUnit.value = unitOptions.value[0]
+function rebuildUnitOptions(density) {
+	const prev = selectedUnit.value?.value
+	unitOptions.value = [...defaultUnitOptions(), ...volumeUnitOptions(density ?? 0)]
+	selectedUnit.value = unitOptions.value.find(o => o.value === prev) ?? unitOptions.value[0]
 }
+
+function resetUnits() {
+	selectedDensityGramsPerMl.value = null
+	rebuildUnitOptions(null)
+}
+
+watch(selectedDensityGramsPerMl, rebuildUnitOptions)
+
+/** Multipliers for inferring density back from a stored gramsPerUnit */
+const ML_MULTIPLIERS = { ml: 1, tsp: ML_PER_TSP, tbsp: ML_PER_TBSP, fl_oz: ML_PER_FL_OZ, cup: ML_PER_CUP }
 
 /**
  * Convert a stored entry (metric) to form values (user's preferred units).
+ * Also sets selectedDensityGramsPerMl when the entry uses a volume unit.
  * @param {object} entry Stored food entry in metric units
  */
 function entryToForm(entry) {
+	const amountUnit = entry.amountUnit ?? 'g'
+	const isVolumeUnit = Boolean(ML_MULTIPLIERS[amountUnit])
+
+	let density = null
+	let displayAmount
+	if (isVolumeUnit) {
+		density = (entry.gramsPerUnit ?? 1.0) / ML_MULTIPLIERS[amountUnit]
+		displayAmount = entry.amountValue ?? entry.amountGrams
+	} else {
+		displayAmount = entry.amountGrams != null ? displayWeight(entry.amountGrams) : ''
+	}
+	selectedDensityGramsPerMl.value = density
+
 	return {
 		foodName: entry.foodName,
 		caloriesPer100g: entry.caloriesPer100g != null ? displayEnergy(displayPer100g(entry.caloriesPer100g)) : '',
-		amount: entry.amountGrams != null ? displayWeight(entry.amountGrams) : '',
+		amount: displayAmount,
 		mealType: entry.mealType,
 		eatenAt: entry.eatenAt,
 		proteinPer100g: entry.proteinPer100g != null ? displayPer100g(entry.proteinPer100g) : '',
@@ -373,8 +411,16 @@ function entryToForm(entry) {
 const form = reactive(defaultForm())
 
 watch(editingEntry, (entry) => {
-	Object.assign(form, entry ? entryToForm(entry) : defaultForm())
-	resetUnits()
+	if (entry) {
+		Object.assign(form, entryToForm(entry))
+		// entryToForm already set selectedDensityGramsPerMl; rebuild units then match unit
+		rebuildUnitOptions(selectedDensityGramsPerMl.value)
+		const amountUnit = entry.amountUnit ?? (isImperial.value ? 'oz' : 'g')
+		selectedUnit.value = unitOptions.value.find(o => o.value === amountUnit) ?? unitOptions.value[0]
+	} else {
+		Object.assign(form, defaultForm())
+		resetUnits()
+	}
 	showManual.value = false
 	addedEntries.value = []
 	editingAddedEntry.value = null
@@ -590,21 +636,23 @@ function selectResult(result) {
 	form.fatPer100g = result.fatPer100g != null ? displayPer100g(result.fatPer100g) : ''
 	selectedSource.value = result.source ?? null
 	selectedExternalId.value = result.externalId ?? null
+	selectedDensityGramsPerMl.value = result.densityGramsPerMl ?? null
 
-	// Build unit options: base weight unit + serving if available
-	const options = defaultUnitOptions()
+	const base = defaultUnitOptions()
+	const vol = volumeUnitOptions(result.densityGramsPerMl ?? 0)
+
 	if (result.servingSizeGrams && result.servingSizeGrams > 0) {
 		const desc = result.servingDescription
 			? t('calorietracker', 'serving ({desc})', { desc: result.servingDescription })
 			: t('calorietracker', 'serving ({grams}{unit})', { grams: displayWeight(result.servingSizeGrams), unit: weightLabel.value })
-		options.push({
+		base.push({
 			value: 'serving',
 			label: desc,
 			gramsPerUnit: result.servingSizeGrams,
 		})
 	}
-	unitOptions.value = options
-	selectedUnit.value = options[0]
+	unitOptions.value = [...base, ...vol]
+	selectedUnit.value = base[0]
 
 	showManual.value = true
 	closeSearch()
@@ -658,15 +706,18 @@ function selectHighlighted() {
 }
 
 /**
- *
+ * @return {object}
  */
 function toPayload() {
 	const nullIfEmpty = (v) => v === '' ? null : v
 	const { amount, ...rest } = form
+	const unit = selectedUnit.value
 	return {
 		...rest,
 		caloriesPer100g: toPer100g(toKcal(Number(form.caloriesPer100g))),
-		amountGrams: Math.max(1, Math.round(amountToGrams())),
+		amountValue: Number(form.amount),
+		amountUnit: unit?.value ?? 'g',
+		gramsPerUnit: unit?.gramsPerUnit ?? 1.0,
 		proteinPer100g: nullIfEmpty(form.proteinPer100g) !== null ? toPer100g(Number(form.proteinPer100g)) : null,
 		carbsPer100g: nullIfEmpty(form.carbsPer100g) !== null ? toPer100g(Number(form.carbsPer100g)) : null,
 		fatPer100g: nullIfEmpty(form.fatPer100g) !== null ? toPer100g(Number(form.fatPer100g)) : null,
@@ -707,6 +758,7 @@ async function submit() {
 				...payload,
 				source: selectedSource.value,
 				externalId: selectedExternalId.value,
+				densityGramsPerMl: selectedDensityGramsPerMl.value || null,
 			})
 			// Remember the added entry and reset to search view
 			addedEntries.value.push(entry)
@@ -730,7 +782,10 @@ async function submit() {
  */
 function editAddedEntry(entry) {
 	Object.assign(form, entryToForm(entry))
-	resetUnits()
+	// entryToForm sets selectedDensityGramsPerMl; rebuild and restore unit
+	rebuildUnitOptions(selectedDensityGramsPerMl.value)
+	const amountUnit = entry.amountUnit ?? (isImperial.value ? 'oz' : 'g')
+	selectedUnit.value = unitOptions.value.find(o => o.value === amountUnit) ?? unitOptions.value[0]
 	selectedSource.value = entry.source ?? null
 	selectedExternalId.value = entry.externalId ?? null
 	editingAddedEntry.value = entry

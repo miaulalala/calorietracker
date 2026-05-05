@@ -1,7 +1,7 @@
 <?php
 
 /**
- * SPDX-FileCopyrightText: 2026 Nextcloud contributors
+ * SPDX-FileCopyrightText: 2026 Anna Larch
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -20,6 +20,12 @@ use OCP\AppFramework\Db\Entity;
  * @method void setCaloriesPer100g(int $caloriesPer100g)
  * @method int getAmountGrams()
  * @method void setAmountGrams(int $amountGrams)
+ * @method float getAmountValue()
+ * @method void setAmountValue(float $amountValue)
+ * @method string getAmountUnit()
+ * @method void setAmountUnit(string $amountUnit)
+ * @method float getGramsPerUnit()
+ * @method void setGramsPerUnit(float $gramsPerUnit)
  * @method string getMealType()
  * @method void setMealType(string $mealType)
  * @method string getEatenAt()
@@ -38,6 +44,9 @@ class FoodEntry extends Entity implements \JsonSerializable {
 	protected string $foodName = '';
 	protected int $caloriesPer100g = 0;
 	protected int $amountGrams = 0;
+	protected float $amountValue = 0.0;
+	protected string $amountUnit = 'g';
+	protected float $gramsPerUnit = 1.0;
 	protected string $mealType = '';
 	protected string $eatenAt = '';
 	protected ?int $proteinPer100g = null;
@@ -49,6 +58,8 @@ class FoodEntry extends Entity implements \JsonSerializable {
 		$this->addType('id', 'integer');
 		$this->addType('caloriesPer100g', 'integer');
 		$this->addType('amountGrams', 'integer');
+		$this->addType('amountValue', 'float');
+		$this->addType('gramsPerUnit', 'float');
 		$this->addType('proteinPer100g', 'integer');
 		$this->addType('carbsPer100g', 'integer');
 		$this->addType('fatPer100g', 'integer');
@@ -61,6 +72,9 @@ class FoodEntry extends Entity implements \JsonSerializable {
 			'foodName'        => $this->getFoodName(),
 			'caloriesPer100g' => $this->getCaloriesPer100g(),
 			'amountGrams'     => $this->getAmountGrams(),
+			'amountValue'     => $this->getAmountValue(),
+			'amountUnit'      => $this->getAmountUnit(),
+			'gramsPerUnit'    => $this->getGramsPerUnit(),
 			'mealType'        => $this->getMealType(),
 			'eatenAt'         => $this->getEatenAt(),
 			'proteinPer100g'  => $this->getProteinPer100g(),

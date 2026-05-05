@@ -1,7 +1,7 @@
 <?php
 
 /**
- * SPDX-FileCopyrightText: 2026 Nextcloud contributors
+ * SPDX-FileCopyrightText: 2026 Anna Larch
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -28,6 +28,8 @@ use OCP\AppFramework\Db\Entity;
  * @method void setCarbsPer100g(?int $carbsPer100g)
  * @method int|null getFatPer100g()
  * @method void setFatPer100g(?int $fatPer100g)
+ * @method float|null getDensityGramsPerMl()
+ * @method void setDensityGramsPerMl(?float $densityGramsPerMl)
  */
 class FoodItem extends Entity implements \JsonSerializable {
 	protected string $userId = '';
@@ -38,6 +40,7 @@ class FoodItem extends Entity implements \JsonSerializable {
 	protected ?int $proteinPer100g = null;
 	protected ?int $carbsPer100g = null;
 	protected ?int $fatPer100g = null;
+	protected ?float $densityGramsPerMl = null;
 
 	public function __construct() {
 		$this->addType('id', 'integer');
@@ -45,18 +48,20 @@ class FoodItem extends Entity implements \JsonSerializable {
 		$this->addType('proteinPer100g', 'integer');
 		$this->addType('carbsPer100g', 'integer');
 		$this->addType('fatPer100g', 'integer');
+		$this->addType('densityGramsPerMl', 'float');
 	}
 
 	public function jsonSerialize(): array {
 		return [
-			'id'              => $this->getId(),
-			'source'          => $this->getSource(),
-			'externalId'      => $this->getExternalId(),
-			'name'            => $this->getName(),
-			'caloriesPer100g' => $this->getCaloriesPer100g(),
-			'proteinPer100g'  => $this->getProteinPer100g(),
-			'carbsPer100g'    => $this->getCarbsPer100g(),
-			'fatPer100g'      => $this->getFatPer100g(),
+			'id'                 => $this->getId(),
+			'source'             => $this->getSource(),
+			'externalId'         => $this->getExternalId(),
+			'name'               => $this->getName(),
+			'caloriesPer100g'    => $this->getCaloriesPer100g(),
+			'proteinPer100g'     => $this->getProteinPer100g(),
+			'carbsPer100g'       => $this->getCarbsPer100g(),
+			'fatPer100g'         => $this->getFatPer100g(),
+			'densityGramsPerMl'  => $this->getDensityGramsPerMl(),
 		];
 	}
 }

@@ -1,7 +1,7 @@
 <?php
 
 /**
- * SPDX-FileCopyrightText: 2026 Nextcloud contributors
+ * SPDX-FileCopyrightText: 2026 Anna Larch
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -119,6 +119,7 @@ class FoodItemMapper extends QBMapper {
 		?int $proteinPer100g,
 		?int $carbsPer100g,
 		?int $fatPer100g,
+		?float $densityGramsPerMl = null,
 	): FoodItem {
 		// For items with a known external ID, check if we already have it
 		if ($externalId !== null) {
@@ -130,6 +131,10 @@ class FoodItemMapper extends QBMapper {
 				$existing->setProteinPer100g($proteinPer100g);
 				$existing->setCarbsPer100g($carbsPer100g);
 				$existing->setFatPer100g($fatPer100g);
+				// Only overwrite density if the new value is non-null (preserve manual overrides)
+				if ($densityGramsPerMl !== null) {
+					$existing->setDensityGramsPerMl($densityGramsPerMl);
+				}
 				return $this->update($existing);
 			}
 		}
@@ -143,6 +148,7 @@ class FoodItemMapper extends QBMapper {
 		$item->setProteinPer100g($proteinPer100g);
 		$item->setCarbsPer100g($carbsPer100g);
 		$item->setFatPer100g($fatPer100g);
+		$item->setDensityGramsPerMl($densityGramsPerMl);
 		return $this->insert($item);
 	}
 }
