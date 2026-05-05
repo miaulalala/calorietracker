@@ -13,6 +13,27 @@ const GRAMS_PER_OZ = 28.3495
 const KG_TO_LBS = 2.20462
 const CM_PER_INCH = 2.54
 
+export const ML_PER_TSP   = 4.92892
+export const ML_PER_TBSP  = 14.7868
+export const ML_PER_CUP   = 236.588
+export const ML_PER_FL_OZ = 29.5735
+
+/**
+ * Returns volume unit options for a given density (g/ml).
+ * @param {number} density Grams per ml
+ * @return {Array<{value: string, label: string, gramsPerUnit: number}>}
+ */
+export function volumeUnitOptions(density) {
+	if (!density || density <= 0) return []
+	return [
+		{ value: 'ml',    label: 'ml',    gramsPerUnit: density },
+		{ value: 'tsp',   label: 'tsp',   gramsPerUnit: ML_PER_TSP * density },
+		{ value: 'tbsp',  label: 'tbsp',  gramsPerUnit: ML_PER_TBSP * density },
+		{ value: 'fl_oz', label: 'fl oz', gramsPerUnit: ML_PER_FL_OZ * density },
+		{ value: 'cup',   label: 'cup',   gramsPerUnit: ML_PER_CUP * density },
+	]
+}
+
 /**
  * Composable providing reactive unit conversion helpers.
  *

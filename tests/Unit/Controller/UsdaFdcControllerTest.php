@@ -186,4 +186,77 @@ class UsdaFdcControllerTest extends TestCase {
 
 		$this->controller->search('test');
 	}
+
+	// ── liquid detection ───────────────────────────────────────────────────────
+
+	public function testSearchSetsDensityWhenServingSizeUnitIsMl(): void {
+		$this->cache->method('get')->willReturn(null);
+
+		$apiData = ['foods' => [[
+			'fdcId' => 1,
+			'description' => 'Orange Juice',
+			'dataType' => 'SR Legacy',
+			'servingSize' => 240.0,
+			'servingSizeUnit' => 'ml',
+			'householdServingFullText' => '1 cup',
+			'foodNutrients' => [['nutrientId' => 1008, 'value' => 45.0]],
+		]]];
+
+		$apiResponse = $this->createMock(IResponse::class);
+		$apiResponse->method('getBody')->willReturn(json_encode($apiData));
+		$client = $this->createMock(IClient::class);
+		$client->method('get')->willReturn($apiResponse);
+		$this->clientService->method('newClient')->willReturn($client);
+
+		$data = $this->controller->search('orange juice')->getData();
+		$this->assertCount(1, $data);
+		$this->assertEquals(1.0, $data[0]['densityGramsPerMl']);
+		$this->assertEquals(240.0, $data[0]['servingSizeGrams']);
+		$this->assertEquals('1 cup', $data[0]['servingDescription']);
+	}
+
+	public function testSearchDensityNullWhenServingSizeUnitIsGrams(): void {
+		$this->cache->method('get')->willReturn(null);
+
+		$apiData = ['foods' => [[
+			'fdcId' => 2,
+			'description' => 'Oats',
+			'dataType' => 'Foundation',
+			'servingSize' => 40.0,
+			'servingSizeUnit' => 'g',
+			'foodNutrients' => [['nutrientId' => 1008, 'value' => 380.0]],
+		]]];
+
+		$apiResponse = $this->createMock(IResponse::class);
+		$apiResponse->method('getBody')->willReturn(json_encode($apiData));
+		$client = $this->createMock(IClient::class);
+		$client->method('get')->willReturn($apiResponse);
+		$this->clientService->method('newClient')->willReturn($client);
+
+		$data = $this->controller->search('oats')->getData();
+		$this->assertCount(1, $data);
+		$this->assertNull($data[0]['densityGramsPerMl']);
+		$this->assertEquals(40.0, $data[0]['servingSizeGrams']);
+	}
+
+	public function testSearchDensityNullWhenNoServingSize(): void {
+		$this->cache->method('get')->willReturn(null);
+
+		$apiData = ['foods' => [[
+			'fdcId' => 3,
+			'description' => 'Apple',
+			'dataType' => 'Foundation',
+			'foodNutrients' => [['nutrientId' => 1008, 'value' => 52.0]],
+		]]];
+
+		$apiResponse = $this->createMock(IResponse::class);
+		$apiResponse->method('getBody')->willReturn(json_encode($apiData));
+		$client = $this->createMock(IClient::class);
+		$client->method('get')->willReturn($apiResponse);
+		$this->clientService->method('newClient')->willReturn($client);
+
+		$data = $this->controller->search('apple')->getData();
+		$this->assertCount(1, $data);
+		$this->assertNull($data[0]['densityGramsPerMl']);
+	}
 }

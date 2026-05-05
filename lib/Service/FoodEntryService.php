@@ -1,7 +1,7 @@
 <?php
 
 /**
- * SPDX-FileCopyrightText: 2026 Nextcloud contributors
+ * SPDX-FileCopyrightText: 2026 Anna Larch
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -18,9 +18,12 @@ class FoodEntryService {
 	public const MEAL_TYPES = ['breakfast', 'lunch', 'dinner', 'snack'];
 
 	private const MAX_FOOD_NAME_LENGTH  = 255;
-	private const MAX_CALORIES_PER_100G = 9000;  // well above pure fat (~900 kcal/100 g)
-	private const MAX_AMOUNT_GRAMS      = 10000; // 10 kg ceiling
-	private const MAX_MACRO_PER_100G    = 100;   // no single macro can exceed 100 g/100 g
+	private const MAX_CALORIES_PER_100G = 9000;   // well above pure fat (~900 kcal/100 g)
+	private const MAX_AMOUNT_GRAMS      = 10000;  // 10 kg ceiling
+	private const MAX_MACRO_PER_100G    = 100;    // no single macro can exceed 100 g/100 g
+	private const MAX_AMOUNT_VALUE      = 10000.0;
+	private const MAX_GRAMS_PER_UNIT    = 5000.0;
+	public const  VALID_AMOUNT_UNITS    = ['g', 'ml', 'oz', 'tsp', 'tbsp', 'cup', 'fl_oz'];
 
 	public function __construct(
 		private FoodEntryMapper $mapper,
@@ -44,7 +47,7 @@ class FoodEntryService {
 		string $userId,
 		string $foodName,
 		int $caloriesPer100g,
-		int $amountGrams,
+		float $amountValue,
 		string $mealType,
 		string $eatenAt,
 		?int $proteinPer100g = null,
@@ -52,12 +55,17 @@ class FoodEntryService {
 		?int $fatPer100g = null,
 		?string $source = null,
 		?string $externalId = null,
+		string $amountUnit = 'g',
+		float $gramsPerUnit = 1.0,
+		?float $densityGramsPerMl = null,
 	): FoodEntry {
 		$foodName = mb_substr(trim($foodName), 0, self::MAX_FOOD_NAME_LENGTH, 'UTF-8');
 		$this->validateMealType($mealType);
 		$this->validateDate($eatenAt);
 		$this->validatePositive('caloriesPer100g', $caloriesPer100g, self::MAX_CALORIES_PER_100G);
-		$this->validatePositive('amountGrams', $amountGrams, self::MAX_AMOUNT_GRAMS);
+		$this->validateAmountValue($amountValue);
+		$this->validateAmountUnit($amountUnit);
+		$this->validateGramsPerUnit($gramsPerUnit);
 		if ($proteinPer100g !== null) {
 			$this->validateMacro('proteinPer100g', $proteinPer100g);
 		}
@@ -66,6 +74,11 @@ class FoodEntryService {
 		}
 		if ($fatPer100g !== null) {
 			$this->validateMacro('fatPer100g', $fatPer100g);
+		}
+
+		$amountGrams = max(1, (int) round($amountValue * $gramsPerUnit));
+		if ($amountGrams > self::MAX_AMOUNT_GRAMS) {
+			throw new \InvalidArgumentException('Computed amount in grams must not exceed ' . self::MAX_AMOUNT_GRAMS . '.');
 		}
 
 		// Persist the food reference so it survives cache expiry
@@ -80,6 +93,7 @@ class FoodEntryService {
 				$proteinPer100g,
 				$carbsPer100g,
 				$fatPer100g,
+				$densityGramsPerMl,
 			);
 			$foodItemId = $foodItem->getId();
 		}
@@ -89,6 +103,9 @@ class FoodEntryService {
 		$entry->setFoodName($foodName);
 		$entry->setCaloriesPer100g($caloriesPer100g);
 		$entry->setAmountGrams($amountGrams);
+		$entry->setAmountValue($amountValue);
+		$entry->setAmountUnit($amountUnit);
+		$entry->setGramsPerUnit($gramsPerUnit);
 		$entry->setMealType($mealType);
 		$entry->setEatenAt($eatenAt);
 		$entry->setProteinPer100g($proteinPer100g);
@@ -104,18 +121,22 @@ class FoodEntryService {
 		string $userId,
 		string $foodName,
 		int $caloriesPer100g,
-		int $amountGrams,
+		float $amountValue,
 		string $mealType,
 		string $eatenAt,
 		?int $proteinPer100g = null,
 		?int $carbsPer100g = null,
 		?int $fatPer100g = null,
+		string $amountUnit = 'g',
+		float $gramsPerUnit = 1.0,
 	): FoodEntry {
 		$foodName = mb_substr(trim($foodName), 0, self::MAX_FOOD_NAME_LENGTH, 'UTF-8');
 		$this->validateMealType($mealType);
 		$this->validateDate($eatenAt);
 		$this->validatePositive('caloriesPer100g', $caloriesPer100g, self::MAX_CALORIES_PER_100G);
-		$this->validatePositive('amountGrams', $amountGrams, self::MAX_AMOUNT_GRAMS);
+		$this->validateAmountValue($amountValue);
+		$this->validateAmountUnit($amountUnit);
+		$this->validateGramsPerUnit($gramsPerUnit);
 		if ($proteinPer100g !== null) {
 			$this->validateMacro('proteinPer100g', $proteinPer100g);
 		}
@@ -126,10 +147,18 @@ class FoodEntryService {
 			$this->validateMacro('fatPer100g', $fatPer100g);
 		}
 
+		$amountGrams = max(1, (int) round($amountValue * $gramsPerUnit));
+		if ($amountGrams > self::MAX_AMOUNT_GRAMS) {
+			throw new \InvalidArgumentException('Computed amount in grams must not exceed ' . self::MAX_AMOUNT_GRAMS . '.');
+		}
+
 		$entry = $this->mapper->findForUser($id, $userId);
 		$entry->setFoodName($foodName);
 		$entry->setCaloriesPer100g($caloriesPer100g);
 		$entry->setAmountGrams($amountGrams);
+		$entry->setAmountValue($amountValue);
+		$entry->setAmountUnit($amountUnit);
+		$entry->setGramsPerUnit($gramsPerUnit);
 		$entry->setMealType($mealType);
 		$entry->setEatenAt($eatenAt);
 		$entry->setProteinPer100g($proteinPer100g);
@@ -203,10 +232,33 @@ class FoodEntryService {
 			$this->validatePositive('caloriesPer100g', $val, self::MAX_CALORIES_PER_100G);
 			$entry->setCaloriesPer100g($val);
 		}
-		if (array_key_exists('amountGrams', $fields) && $fields['amountGrams'] !== null) {
-			$val = self::toInt('amountGrams', $fields['amountGrams']);
-			$this->validatePositive('amountGrams', $val, self::MAX_AMOUNT_GRAMS);
-			$entry->setAmountGrams($val);
+		$recomputeGrams = false;
+		if (array_key_exists('amountValue', $fields) && $fields['amountValue'] !== null) {
+			$val = self::toFloat('amountValue', $fields['amountValue']);
+			$this->validateAmountValue($val);
+			$entry->setAmountValue($val);
+			$recomputeGrams = true;
+		}
+		if (array_key_exists('amountUnit', $fields) && $fields['amountUnit'] !== null) {
+			if (!is_string($fields['amountUnit'])) {
+				throw new \InvalidArgumentException('amountUnit must be a string.');
+			}
+			$this->validateAmountUnit($fields['amountUnit']);
+			$entry->setAmountUnit($fields['amountUnit']);
+			$recomputeGrams = true;
+		}
+		if (array_key_exists('gramsPerUnit', $fields) && $fields['gramsPerUnit'] !== null) {
+			$val = self::toFloat('gramsPerUnit', $fields['gramsPerUnit']);
+			$this->validateGramsPerUnit($val);
+			$entry->setGramsPerUnit($val);
+			$recomputeGrams = true;
+		}
+		if ($recomputeGrams) {
+			$amountGrams = max(1, (int) round($entry->getAmountValue() * $entry->getGramsPerUnit()));
+			if ($amountGrams > self::MAX_AMOUNT_GRAMS) {
+				throw new \InvalidArgumentException('Computed amount in grams must not exceed ' . self::MAX_AMOUNT_GRAMS . '.');
+			}
+			$entry->setAmountGrams($amountGrams);
 		}
 		if (array_key_exists('mealType', $fields) && $fields['mealType'] !== null) {
 			if (!is_string($fields['mealType'])) {
@@ -247,11 +299,6 @@ class FoodEntryService {
 		return $this->mapper->update($entry);
 	}
 
-	/**
-	 * Safely cast a mixed value (typically string from request) to int.
-	 *
-	 * @throws \InvalidArgumentException if the value is not numeric
-	 */
 	private static function toInt(string $field, mixed $value): int {
 		if (is_int($value)) {
 			return $value;
@@ -260,6 +307,16 @@ class FoodEntryService {
 			return (int)$value;
 		}
 		throw new \InvalidArgumentException("$field must be an integer.");
+	}
+
+	private static function toFloat(string $field, mixed $value): float {
+		if (is_float($value) || is_int($value)) {
+			return (float)$value;
+		}
+		if (is_string($value) && is_numeric($value)) {
+			return (float)$value;
+		}
+		throw new \InvalidArgumentException("$field must be a number.");
 	}
 
 	private const MAX_BATCH_COPY = 50;
@@ -295,6 +352,9 @@ class FoodEntryService {
 			$entry->setFoodName($src->getFoodName());
 			$entry->setCaloriesPer100g($src->getCaloriesPer100g());
 			$entry->setAmountGrams($src->getAmountGrams());
+			$entry->setAmountValue($src->getAmountValue());
+			$entry->setAmountUnit($src->getAmountUnit());
+			$entry->setGramsPerUnit($src->getGramsPerUnit());
 			$entry->setMealType($src->getMealType());
 			$entry->setEatenAt($toDate);
 			$entry->setProteinPer100g($src->getProteinPer100g());
@@ -345,6 +405,32 @@ class FoodEntryService {
 		}
 		if ($value > self::MAX_MACRO_PER_100G) {
 			throw new \InvalidArgumentException("$field must not exceed " . self::MAX_MACRO_PER_100G . ' g per 100 g.');
+		}
+	}
+
+	private function validateAmountValue(float $value): void {
+		if (!is_finite($value) || $value <= 0) {
+			throw new \InvalidArgumentException('amountValue must be greater than 0.');
+		}
+		if ($value > self::MAX_AMOUNT_VALUE) {
+			throw new \InvalidArgumentException('amountValue must not exceed ' . self::MAX_AMOUNT_VALUE . '.');
+		}
+	}
+
+	private function validateAmountUnit(string $unit): void {
+		if (!in_array($unit, self::VALID_AMOUNT_UNITS, true)) {
+			throw new \InvalidArgumentException(
+				'Invalid amountUnit. Must be one of: ' . implode(', ', self::VALID_AMOUNT_UNITS)
+			);
+		}
+	}
+
+	private function validateGramsPerUnit(float $value): void {
+		if (!is_finite($value) || $value <= 0) {
+			throw new \InvalidArgumentException('gramsPerUnit must be greater than 0.');
+		}
+		if ($value > self::MAX_GRAMS_PER_UNIT) {
+			throw new \InvalidArgumentException('gramsPerUnit must not exceed ' . self::MAX_GRAMS_PER_UNIT . '.');
 		}
 	}
 }

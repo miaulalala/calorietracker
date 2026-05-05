@@ -203,16 +203,26 @@ class UsdaFdcController extends Controller {
 					? (int) round((float) $nutrients[self::NUTRIENT_CARBS]) : null,
 				'fatPer100g'      => isset($nutrients[self::NUTRIENT_FAT])
 					? (int) round((float) $nutrients[self::NUTRIENT_FAT]) : null,
+				'densityGramsPerMl' => null,
 				'_order'          => self::DATA_TYPE_ORDER[$food['dataType'] ?? ''] ?? 99,
 			];
 
 			// Include serving size info when available
 			if (isset($food['servingSize']) && is_numeric($food['servingSize'])) {
 				$unit = strtolower(trim($food['servingSizeUnit'] ?? ''));
-				$servingGrams = ($unit === 'g') ? (float) $food['servingSize'] : null;
-				if ($servingGrams !== null && $servingGrams > 0) {
-					$result['servingSizeGrams'] = round($servingGrams, 1);
-					$result['servingDescription'] = $food['householdServingFullText'] ?? null;
+				if ($unit === 'g') {
+					$servingGrams = (float) $food['servingSize'];
+					if ($servingGrams > 0) {
+						$result['servingSizeGrams'] = round($servingGrams, 1);
+						$result['servingDescription'] = $food['householdServingFullText'] ?? null;
+					}
+				} elseif ($unit === 'ml') {
+					$result['densityGramsPerMl'] = 1.0;
+					$servingMl = (float) $food['servingSize'];
+					if ($servingMl > 0) {
+						$result['servingSizeGrams'] = round($servingMl, 1);
+						$result['servingDescription'] = $food['householdServingFullText'] ?? null;
+					}
 				}
 			}
 

@@ -39,6 +39,7 @@ class OpenFoodFactsControllerTest extends TestCase {
 		$cacheFactory->method('createDistributed')->willReturn($this->cache);
 
 		$l10nFactory = $this->createMock(IL10NFactory::class);
+		$l10nFactory->method('getUserLanguage')->willReturn('en');
 
 		$this->controller = new OpenFoodFactsController(
 			$request,
@@ -170,5 +171,76 @@ class OpenFoodFactsControllerTest extends TestCase {
 
 		$response = $this->controller->barcode('0041220080014');
 		$this->assertEquals(Http::STATUS_BAD_GATEWAY, $response->getStatus());
+	}
+
+	// ── search() liquid detection ──────────────────────────────────────────────
+
+	private function makeSearchResponse(array $product): IResponse&MockObject {
+		$body = json_encode(['products' => [$product]]);
+		$apiResponse = $this->createMock(IResponse::class);
+		$apiResponse->method('getBody')->willReturn($body);
+		$client = $this->createMock(IClient::class);
+		$client->method('get')->willReturn($apiResponse);
+		$this->clientService->method('newClient')->willReturn($client);
+		return $apiResponse;
+	}
+
+	public function testSearchSetsDensityForLiquidProduct(): void {
+		$this->cache->method('get')->willReturn(null);
+		$this->makeSearchResponse([
+			'code' => '123',
+			'product_name_en' => 'Orange Juice',
+			'nutriments' => [
+				'energy-kcal_100ml' => 45.0,
+				'proteins_100ml'    => 0.7,
+			],
+		]);
+
+		$data = $this->controller->search('orange juice')->getData();
+		$this->assertCount(1, $data);
+		$this->assertEquals(1.0, $data[0]['densityGramsPerMl']);
+		$this->assertEquals(45, $data[0]['caloriesPer100g']);
+		$this->assertEquals(1, $data[0]['proteinPer100g']);
+	}
+
+	public function testSearchPrefersPer100gNutrientsWhenBothPresent(): void {
+		$this->cache->method('get')->willReturn(null);
+		$this->makeSearchResponse([
+			'code' => '456',
+			'product_name_en' => 'Smoothie',
+			'nutriments' => [
+				'energy-kcal_100g'      => 60.0,
+				'energy-kcal_100ml'     => 58.0,  // per-ml value present → still liquid
+				'proteins_100g'         => 1.2,
+			],
+		]);
+
+		$data = $this->controller->search('smoothie')->getData();
+		$this->assertCount(1, $data);
+		$this->assertEquals(1.0, $data[0]['densityGramsPerMl']);
+		$this->assertEquals(60, $data[0]['caloriesPer100g']);  // 100g wins
+		$this->assertEquals(1, $data[0]['proteinPer100g']);
+	}
+
+	public function testSearchDensityNullForSolidFood(): void {
+		$this->cache->method('get')->willReturn(null);
+		$this->makeSearchResponse([
+			'code' => '789',
+			'product_name_en' => 'Rice Crackers',
+			'nutriments' => [
+				'energy-kcal_100g' => 400.0,
+				'proteins_100g'    => 8.0,
+			],
+		]);
+
+		$data = $this->controller->search('crackers')->getData();
+		$this->assertCount(1, $data);
+		$this->assertNull($data[0]['densityGramsPerMl']);
+	}
+
+	public function testSearchReturnsEmptyForShortQuery(): void {
+		$response = $this->controller->search('a');
+		$this->assertEquals(Http::STATUS_OK, $response->getStatus());
+		$this->assertEquals([], $response->getData());
 	}
 }
