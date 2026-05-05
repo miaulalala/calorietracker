@@ -61,6 +61,18 @@ describe('settings store', () => {
 			expect(store.energyUnit).toBe('kcal')
 			expect(store.measurementSystem).toBe('metric')
 		})
+
+		test('fetches and updates showWeightOnDayView', async () => {
+			api.getSettings.mockResolvedValue({ showWeightOnDayView: true })
+			await store.fetchSettings()
+			expect(store.showWeightOnDayView).toBe(true)
+		})
+
+		test('defaults showWeightOnDayView to false when missing', async () => {
+			api.getSettings.mockResolvedValue({})
+			await store.fetchSettings()
+			expect(store.showWeightOnDayView).toBe(false)
+		})
 	})
 
 	describe('saveSettings', () => {
@@ -78,6 +90,20 @@ describe('settings store', () => {
 			await store.saveSettings(payload)
 			expect(store.energyUnit).toBe('kj')
 			expect(store.measurementSystem).toBe('imperial')
+		})
+
+		test('saves and updates showWeightOnDayView from response', async () => {
+			const payload = { dailyCalorieGoal: 2000, showWeightOnDayView: true }
+			api.saveSettings.mockResolvedValue(payload)
+			await store.saveSettings(payload)
+			expect(store.showWeightOnDayView).toBe(true)
+		})
+
+		test('defaults showWeightOnDayView to false when missing from save response', async () => {
+			store.showWeightOnDayView = true
+			api.saveSettings.mockResolvedValue({ dailyCalorieGoal: 2000 })
+			await store.saveSettings({ dailyCalorieGoal: 2000 })
+			expect(store.showWeightOnDayView).toBe(false)
 		})
 	})
 

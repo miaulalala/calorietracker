@@ -36,6 +36,12 @@ return [
 		// food items (quick re-entry)
 		['name' => 'food_item#index', 'url' => '/food-items', 'verb' => 'GET'],
 
+		// weight logs
+		['name' => 'weight_log#index', 'url' => '/weight-logs', 'verb' => 'GET'],
+		['name' => 'weight_log#latest', 'url' => '/weight-logs/latest', 'verb' => 'GET'],
+		['name' => 'weight_log#create', 'url' => '/weight-logs', 'verb' => 'POST'],
+		['name' => 'weight_log#delete', 'url' => '/weight-logs/{id}', 'verb' => 'DELETE'],
+
 		// settings
 		['name' => 'settings#get', 'url' => '/settings', 'verb' => 'GET'],
 		['name' => 'settings#save', 'url' => '/settings', 'verb' => 'PUT'],

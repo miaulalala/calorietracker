@@ -17,6 +17,8 @@
 			<AddFoodEntryForm />
 		</NcModal>
 		<SettingsView />
+		<WeightLogModal v-if="weightLogModalOpen" @close="weightLogStore.closeLogModal()" />
+		<WeightGraphModal v-if="weightGraphModalOpen" @close="weightLogStore.closeGraphModal()" />
 	</NcContent>
 </template>
 
@@ -29,10 +31,16 @@ import NcModal from '@nextcloud/vue/components/NcModal'
 import DaySidebar from './components/DaySidebar.vue'
 import AddFoodEntryForm from './components/AddFoodEntryForm.vue'
 import SettingsView from './components/SettingsView.vue'
+import WeightLogModal from './components/WeightLogModal.vue'
+import WeightGraphModal from './components/WeightGraphModal.vue'
 import { useFoodEntriesStore } from './stores/foodEntries.js'
+import { useWeightLogStore } from './stores/weightLog.js'
 
 const store = useFoodEntriesStore()
 const { addModalOpen, editingEntry } = storeToRefs(store)
+
+const weightLogStore = useWeightLogStore()
+const { logModalOpen: weightLogModalOpen, graphModalOpen: weightGraphModalOpen } = storeToRefs(weightLogStore)
 </script>
 
 <style>
