@@ -17,7 +17,7 @@
 					v-model.number="form.weight"
 					type="number"
 					:label="t('calorietracker', 'Weight ({unit})', { unit: bodyWeightLabel })"
-					:min="isImperial ? 44.1 : 20"
+					:min="isImperial ? 44 : 20"
 					:max="isImperial ? 1102.3 : 500"
 					step="0.1"
 					required />

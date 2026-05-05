@@ -181,12 +181,16 @@ const yTicks = computed(() => {
 
 const xTicks = computed(() => {
 	if (points.value.length === 0) return []
+	const last = points.value.length - 1
 	const count = Math.min(5, points.value.length)
-	const step = Math.floor(points.value.length / count)
-	return points.value
-		.filter((_, i) => i % step === 0 || i === points.value.length - 1)
+	const indices = new Set([last])
+	for (let i = 0; i < count; i++) {
+		indices.add(Math.round(i * last / (count - 1 || 1)))
+	}
+	return [...indices]
+		.sort((a, b) => a - b)
 		.slice(0, 6)
-		.map(p => ({ ts: p.ts, label: p.dateLabel }))
+		.map(i => ({ ts: points.value[i].ts, label: points.value[i].dateLabel }))
 })
 
 /**

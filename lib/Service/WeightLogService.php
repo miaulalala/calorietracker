@@ -99,7 +99,7 @@ class WeightLogService {
 	}
 
 	private function validateWeight(float $weight): void {
-		if ($weight < self::MIN_WEIGHT_KG || $weight > self::MAX_WEIGHT_KG) {
+		if (!is_finite($weight) || $weight < self::MIN_WEIGHT_KG || $weight > self::MAX_WEIGHT_KG) {
 			throw new \InvalidArgumentException(
 				'Weight must be between ' . self::MIN_WEIGHT_KG . ' and ' . self::MAX_WEIGHT_KG . ' kg.'
 			);
