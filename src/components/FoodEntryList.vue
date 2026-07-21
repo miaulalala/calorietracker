@@ -41,7 +41,7 @@
 						@click="store.openAddModal(entry)">
 						<template #description>
 							<span class="food-entry-list__details">
-								<span class="food-entry-list__detail">{{ displayWeight(entry.amountGrams) }}{{ weightLabel }}</span>
+								<span class="food-entry-list__detail">{{ entry.amountUnit && entry.amountUnit !== 'g' && entry.amountUnit !== 'oz' ? `${entry.amountValue} ${entry.amountUnit}` : `${displayWeight(entry.amountGrams)}${weightLabel}` }}</span>
 								<span class="food-entry-list__detail food-entry-list__detail--energy">{{ entryEnergy(entry.caloriesPer100g, entry.amountGrams) }} {{ energyLabel }}</span>
 								<span v-if="entry.proteinPer100g != null" class="food-entry-list__detail food-entry-list__detail--macro"><abbr :title="t('calorietracker', 'Protein')">P</abbr> {{ entryMacroGrams(entry.proteinPer100g, entry.amountGrams) }}{{ weightLabel }}</span>
 								<span v-if="entry.carbsPer100g != null" class="food-entry-list__detail food-entry-list__detail--macro"><abbr :title="t('calorietracker', 'Carbs')">C</abbr> {{ entryMacroGrams(entry.carbsPer100g, entry.amountGrams) }}{{ weightLabel }}</span>

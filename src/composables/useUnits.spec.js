@@ -5,7 +5,7 @@
 
 import { describe, it, expect, beforeEach } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
-import { useUnits } from './useUnits.js'
+import { useUnits, volumeUnitOptions, ML_PER_TSP, ML_PER_TBSP, ML_PER_CUP, ML_PER_FL_OZ } from './useUnits.js'
 import { useSettingsStore } from '../stores/settings.js'
 
 describe('useUnits', () => {
@@ -132,6 +132,67 @@ describe('useUnits', () => {
 			const { entryMacroGrams } = useUnits()
 			// 12g/100g * 250g = 30g → 30 / 28.3495 ≈ 1.058 → rounded to 1.1
 			expect(entryMacroGrams(12, 250)).toBeCloseTo(1.1, 1)
+		})
+	})
+
+	describe('volumeUnitOptions', () => {
+		it('returns empty array for zero density', () => {
+			expect(volumeUnitOptions(0)).toEqual([])
+		})
+
+		it('returns empty array for null density', () => {
+			expect(volumeUnitOptions(null)).toEqual([])
+		})
+
+		it('returns five units for density 1.0 (water)', () => {
+			const opts = volumeUnitOptions(1.0)
+			expect(opts).toHaveLength(5)
+			const values = opts.map(o => o.value)
+			expect(values).toContain('ml')
+			expect(values).toContain('tsp')
+			expect(values).toContain('tbsp')
+			expect(values).toContain('fl_oz')
+			expect(values).toContain('cup')
+		})
+
+		it('sets ml gramsPerUnit equal to density', () => {
+			const opts = volumeUnitOptions(0.8)
+			const ml = opts.find(o => o.value === 'ml')
+			expect(ml.gramsPerUnit).toBeCloseTo(0.8)
+		})
+
+		it('scales tsp gramsPerUnit by ML_PER_TSP', () => {
+			const density = 1.0
+			const opts = volumeUnitOptions(density)
+			const tsp = opts.find(o => o.value === 'tsp')
+			expect(tsp.gramsPerUnit).toBeCloseTo(ML_PER_TSP * density)
+		})
+
+		it('scales tbsp gramsPerUnit by ML_PER_TBSP', () => {
+			const opts = volumeUnitOptions(1.0)
+			const tbsp = opts.find(o => o.value === 'tbsp')
+			expect(tbsp.gramsPerUnit).toBeCloseTo(ML_PER_TBSP)
+		})
+
+		it('scales cup gramsPerUnit by ML_PER_CUP', () => {
+			const opts = volumeUnitOptions(1.0)
+			const cup = opts.find(o => o.value === 'cup')
+			expect(cup.gramsPerUnit).toBeCloseTo(ML_PER_CUP)
+		})
+
+		it('scales fl_oz gramsPerUnit by ML_PER_FL_OZ', () => {
+			const opts = volumeUnitOptions(1.0)
+			const flOz = opts.find(o => o.value === 'fl_oz')
+			expect(flOz.gramsPerUnit).toBeCloseTo(ML_PER_FL_OZ)
+		})
+
+		it('applies density to all unit multipliers', () => {
+			const density = 1.4  // honey-ish
+			const opts = volumeUnitOptions(density)
+			const tsp = opts.find(o => o.value === 'tsp')
+			expect(tsp.gramsPerUnit).toBeCloseTo(ML_PER_TSP * density)
+			const cup = opts.find(o => o.value === 'cup')
+			expect(cup.gramsPerUnit).toBeCloseTo(ML_PER_CUP * density)
 		})
 	})
 })
