@@ -186,16 +186,22 @@ describe('foodEntries store', () => {
 		})
 
 		test('fetchSummaries preserves keys outside the fetched range', async () => {
+			const today = new Date()
+			// Well within the 90-day retention window, but outside the fetched range below
+			const outsideDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 10)
+			const outsideKey = outsideDate.toISOString().slice(0, 10)
+			const insideDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 6)
+			const insideKey = insideDate.toISOString().slice(0, 10)
 			store.daySummaries = {
-				'2026-03-20': { totalKcal: 1500, itemCount: 2 },
-				'2026-03-24': { totalKcal: 1800, itemCount: 3 },
+				[outsideKey]: { totalKcal: 1500, itemCount: 2 },
+				[insideKey]: { totalKcal: 1800, itemCount: 3 },
 			}
-			api.getSummaries.mockResolvedValue([{ date: '2026-03-24', totalKcal: 2000, itemCount: 4 }])
-			await store.fetchSummaries('2026-03-24', '2026-03-24')
+			api.getSummaries.mockResolvedValue([{ date: insideKey, totalKcal: 2000, itemCount: 4 }])
+			await store.fetchSummaries(insideKey, insideKey)
 			// Key outside range must survive
-			expect(store.daySummaries['2026-03-20'].totalKcal).toBe(1500)
+			expect(store.daySummaries[outsideKey].totalKcal).toBe(1500)
 			// Key inside range is replaced with fresh data
-			expect(store.daySummaries['2026-03-24'].totalKcal).toBe(2000)
+			expect(store.daySummaries[insideKey].totalKcal).toBe(2000)
 		})
 
 		test('fetchSummaries prunes keys older than 90 days', async () => {
